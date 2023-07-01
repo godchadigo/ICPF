@@ -1,51 +1,79 @@
 ﻿using ConsolePluginTest;
 using Nancy;
-using Nancy.Hosting.Self;
 using Newtonsoft;
+using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
 namespace PluginB
 {
-    public class PluginB : MemoryShareManager, IPlugin
+    public class PluginB : IPlugin
     {
+        private Program Core;
+        private string PluginName = "PluginB";
+        private CancellationTokenSource cts = new CancellationTokenSource();
 
-        class SampleModule : NancyModule
-        {
-            public SampleModule() {
-                Get("/", args =>
-                {
-                    return Guid.NewGuid().ToString();
-                });
-            }
-        }
 
         public void onLoading()
         {
-            Thread t = new Thread(async () => {
-                while (true)
+            Console.WriteLine(PluginName + " Loading...");
+            // 获取 CancellationToken
+            CancellationToken token = cts.Token;
+            Task.Run(async () => {
+                while (!token.IsCancellationRequested)
                 {
-                    var r = new Random();
-                    int data = r.Next(0, 1000);
-                    Console.WriteLine("PluginB : " + instance.Data);
-                    instance.Data = data;
-                    //Console.WriteLine(r);
-                    await Task.Delay(500);
+                    //Console.WriteLine("PluginA : " + MemoryShareManager.instance.Data);
+                    //Core.DoSomething ("PluginA");
+                    var result = Core.GetData(new ReadDataModel()
+                    {
+                        DeviceName = "Modbus_Tcp_工廠_鑄造區_機臺2",
+                        Address = "10",
+                        ReadLength = 10,
+                        DatasType = DataType.Int16,
+                    });
+
+                    if (result.IsOk)
+                    {
+                        Console.WriteLine(string.Format(PluginName + "執行狀態:{0} 數據: {1}", result.IsOk, DecodeData(result)));
+                    }
+                    else
+                    {
+                        Console.WriteLine(string.Format(PluginName + "執行狀態:{0} 錯誤訊息: {1}", result.IsOk, result.Message));
+                    }
+
+                    await Task.Delay(1000);
                 }
-            });
-            t.Start();
+            }, token);
 
         }
+
         public void onCloseing()
         {
-            Console.WriteLine("PluginB Closeing...");            
-            
+            cts.Cancel();
+            Console.WriteLine(PluginName + " Closeing...");
         }
 
-       
+        public void SetInstance(object dd)
+        {
+            Program program = (Program)dd;
+            Core = program;
+        }
+        private string DecodeData(QJDataArray data)
+        {
+            string temp = string.Empty;
+            if (data.IsOk)
+            {
+                foreach (var str in data.Data)
+                {
+                    temp = temp + str + " ";
+                }
+                return temp;
+            }
+            else
+            {
+                return "";
+            }
+        }
     }
-
-
-
 }
