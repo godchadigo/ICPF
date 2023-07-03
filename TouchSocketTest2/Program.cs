@@ -48,11 +48,12 @@ namespace TouchSocketTest2
         }
         private static void Test()
         {
+            
             Task.Run(async() => {
                 while (true)
                 {
                     if (flag)
-                        tcpClient.Send("Chadigo!!");
+                        tcpClient.Send("SetData DM100 5 10");
                     await Task.Delay(1);
                 }
             });

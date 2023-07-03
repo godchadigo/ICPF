@@ -1,0 +1,7 @@
+{
+  "DeviceName": "Modbus",
+  "CommunicationInterface": 2,
+  "CommunicationProtocol": 3,
+  "IP": "127.0.0.1",
+  "Port": 502
+}

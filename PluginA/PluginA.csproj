@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <BaseOutputPath>D:\自動控制\專案研究\C#\PluginFramework\PluginFramework\bin\Debug\net6.0\Plugins</BaseOutputPath>
+    <BaseOutputPath></BaseOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
 

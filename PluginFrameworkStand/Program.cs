@@ -1,17 +1,53 @@
 ﻿using HslCommunication;
 using HslCommunication.Core.Net;
-using LibaryShare;
 using Microsoft.International.Converters.TraditionalChineseToSimplifiedConverter;
 using Newtonsoft.Json;
-using PluginFramework;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace ConsolePluginTest
 {
-    
+    public interface IPlugin
+    {        
+        void onLoading() { }
+        void onCloseing() { }
+        void onDeviceConnect(string deviceName) { }
+        void onDeviceDisconnect(string deviceName) { }
+        void SetInstance(object dd) { }      
+        void TestA(int a, int b) { }
+        /// <summary>
+        /// 讀取數據(讀取失敗等待)
+        /// </summary>
+        void GetData() { }
+        /// <summary>
+        /// 讀取數據(讀取失敗直接放棄)
+        /// </summary>
+        void GetDataEx() { }
+        /// <summary>
+        /// 寫入數據(寫入失敗等待)
+        /// </summary>
+        void SetData() { }
+        /// <summary>
+        /// 寫入數據(寫入失敗直接放棄)
+        /// </summary>
+        void SetDataEx() { }
+        /// <summary>
+        /// 讀取定義好的標籤
+        /// </summary>
+        void GetTag() { }
+        /// <summary>
+        /// 設定定義好的標籤
+        /// </summary>
+        void SetTag() { }
+    }
     public interface IRWData
     {
         /// <summary>
@@ -133,24 +169,18 @@ namespace ConsolePluginTest
     }
     public class Program 
     {
-        public static event EventHandler<EventArgs> ProgramCreated;
+        
         private static ConcurrentDictionary<string , NetworkDeviceBase> NetDeviceList = new ConcurrentDictionary<string , NetworkDeviceBase>();
         private static Program p;
         private static List<IPlugin> plugins = new List<IPlugin>();
-        public static string Test { get; set; } = "test123456";
-
+        private static object lockObject = new object();
         public static Program GetInstance() 
         {
             return p;
         }
         
-        public void Start()
-        {
-            ConsolePluginTest.Program.Main(null);
-        }
         static void Main(string[] args)
         {
-            
             //***** +測試空間+ *****//
             EthernetDeviceConfigModel ethModel = new EthernetDeviceConfigModel();
             ethModel.DeviceName = "Keyence8500_1";
@@ -165,7 +195,7 @@ namespace ConsolePluginTest
             //***** -測試空間- *****//
             //return;
             CommunicationTask();
-            
+
             #region 插件反射載入
             p = new Program();            
             List<string> pluginpath = p.FindPlugin();
@@ -214,7 +244,6 @@ namespace ConsolePluginTest
             //啟動事件偵聽任務
             EventTask();
 
-            LSManager.Instance.Test();
             //偵測停止指令 以及核心迴圈
             while (true)
             {                
@@ -238,7 +267,6 @@ namespace ConsolePluginTest
                 device.Value.ConnectClose();
             }
             
-
         }
         //查找所有插件的路径
         private List<string> FindPlugin()
@@ -323,12 +351,9 @@ namespace ConsolePluginTest
                 }
             }
             return rightPluginPath;
-        }
+        }        
+  
 
-        private void OnProgramCreated()
-        {
-            ProgramCreated?.Invoke(this, EventArgs.Empty);
-        }
         private static void CommunicationTask()
         {
 
@@ -403,7 +428,6 @@ namespace ConsolePluginTest
 
                 while (true) {
                     try{
-                        Test = "Hello world!";
                         foreach (var device in NetDeviceList)
                         {
                             //Console.WriteLine("現有設備: " + device.Value.IpAddress + NetDeviceList.Count);

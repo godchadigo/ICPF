@@ -1,4 +1,5 @@
 ﻿using ConsolePluginTest;
+using PluginFramework;
 
 namespace PluginA
 {
@@ -20,23 +21,50 @@ namespace PluginA
                 {
                     //Console.WriteLine("PluginA : " + MemoryShareManager.instance.Data);
                     //Core.DoSomething ("PluginA");
-                    var result = Core.GetData(new ReadDataModel()
+                    var keyenceTask = Task.Run(async () => {
+                        var keyenceResult = await Core.GetData(new ReadDataModel()
+                        {
+                            DeviceName = "Keyence8500_1",
+                            Address = "DM10",
+                            ReadLength = 100,
+                            DatasType = DataType.Int16,
+                        });
+                        if (keyenceResult.IsOk)
+                        {
+                            Console.WriteLine(string.Format(PluginName + "Keyence執行狀態:{0} 數據: {1}", keyenceResult.IsOk, DecodeData(keyenceResult)));
+                        }
+                        else
+                        {
+                            Console.WriteLine(string.Format(PluginName + "Keyence執行狀態:{0} 錯誤訊息: {1}", keyenceResult.IsOk, keyenceResult.Message));
+                        }
+                    }) ;
+
+                    var vigorTask = Task.Run(async () => {
+                        var vigorResult = await Core.GetData(new ReadDataModel()
+                        {
+                            DeviceName = "VSM_1",
+                            Address = "D10",
+                            ReadLength = 100,
+                            DatasType = DataType.Int16,
+                        });
+                        if (vigorResult.IsOk)
+                        {
+                            Console.WriteLine(string.Format(PluginName + "vigorResult 執行狀態:{0} 數據: {1}", vigorResult.IsOk, DecodeData(vigorResult)));
+                        }
+                        else
+                        {
+                            Console.WriteLine(string.Format(PluginName + "vigorResult 執行狀態:{0} 錯誤訊息: {1}", vigorResult.IsOk, vigorResult.Message));
+                        }
+                    });
+
+                    var keyenceResult = await Core.GetData(new ReadDataModel()
                     {
-                        DeviceName = "Modbus_Tcp_工廠_鑄造區_機臺1",
-                        Address = "10",
-                        ReadLength = 10,
+                        DeviceName = "MC_1",
+                        Address = "D500",
+                        ReadLength = 1,
                         DatasType = DataType.Int16,
                     });
 
-                    if (result.IsOk)
-                    {
-                        Console.WriteLine(string.Format(PluginName + "執行狀態:{0} 數據: {1}", result.IsOk, DecodeData(result)));
-                    }
-                    else
-                    {
-                        Console.WriteLine(string.Format(PluginName + "執行狀態:{0} 錯誤訊息: {1}", result.IsOk , result.Message ));
-                    }
-                    
                     await Task.Delay(1000);
                 }
             }, token);

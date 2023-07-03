@@ -9,7 +9,7 @@ using TouchSocket.Sockets;
 
 namespace PluginWebAPI
 {
-    public class Main : ConsolePluginTest.IPlugin
+    public class Main : PluginFramework.IPlugin
     {
         public void onLoading()
         {
