@@ -15,9 +15,9 @@ namespace PFC
         public void Connect()
         {
             Task.Run(() => {
-                ConnectWithRetry();
+                
             });
-            
+            ConnectWithRetry();
         }
         private bool isConnected = false;
         private async void ConnectWithRetry()
@@ -110,10 +110,7 @@ namespace PFC
                 return new OperationModel() { IsOk = false , Message = ex.Message };
             }            
         }
-        public OperationModel GetData()
-        {
 
-        }
 
     }
     public class OperationModel
@@ -122,7 +119,19 @@ namespace PFC
         public string Message { get; set; }
         public QJDataArray Data { get; set; }
     }
-
+    public enum DataType
+    {
+        Bool = 1,
+        UInt16 = 2,
+        Int16 = 3,
+        UInt32 = 4,
+        Int32 = 5,
+        UInt64 = 6,
+        Int64 = 7,
+        Float = 8,
+        Double = 9,
+        String = 10,
+    }
     public class QJDataArray
     {
         public bool IsOk { get; set; }

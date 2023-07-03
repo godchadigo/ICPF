@@ -44,8 +44,16 @@ namespace WinFormPluginFrameworkTest
 
         private void button1_Click(object sender, EventArgs e)
         {
-            var result = pfc.Send();            
-            Debug.WriteLine(result.Message);
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    var result = pfc.Send("Test");
+                    Debug.WriteLine(result.Message);
+                    await Task.Delay(10);
+                }                
+            });
+            
         }
     }
 }
