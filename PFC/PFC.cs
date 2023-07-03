@@ -20,6 +20,8 @@ namespace PFC
             ConnectWithRetry();
         }
         private bool isConnected = false;
+        private bool ReceviceFlag = false;
+        private QJDataArray ReceviceBuffer;
         private async void ConnectWithRetry()
         {
             
@@ -43,6 +45,16 @@ namespace PFC
                 {
                     string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
                     Debug.WriteLine($"接收到信息：{mes}");
+                    try
+                    {
+                        ReceviceFlag = true;
+                        ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(mes);                        
+                    }
+                    catch (Exception ex)
+                    {
+                        ReceviceFlag = false;
+                    }
+                    ReceviceFlag = false;
                 };
 
                 TouchSocketConfig config = new TouchSocketConfig();
@@ -110,6 +122,7 @@ namespace PFC
                 return new OperationModel() { IsOk = false , Message = ex.Message };
             }            
         }
+        //QJDataArray
         public OperationModel GetData(ReadDataModel model)
         {
             try
@@ -118,7 +131,12 @@ namespace PFC
                 {
                     var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model , Newtonsoft.Json.Formatting.Indented);
                     tcpClient.Send(jsonStr);
-                    return new OperationModel() { IsOk = true, Message = "通訊成功 : " };
+                    
+                    while (!ReceviceFlag)
+                    {
+                        return new OperationModel() { IsOk = true, Message = "通訊成功 : " + ReceviceBuffer };
+                    }
+                    return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
                 }
                 else
                 {
@@ -161,6 +179,10 @@ namespace PFC
         public bool IsOk { get; set; }
         public string Message { get; set; }
         public QJDataArray Data { get; set; }
+        public override string ToString()
+        {
+            return $"請求結果 : {IsOk} ， 數據 : {Data}";
+        }
     }
     public enum IRWDataOperation
     {
@@ -236,6 +258,16 @@ namespace PFC
         public object[] Data { get; set; }
         public DataType DataType { get; set; }
         public string Message { get; set; }
+        public override string ToString()
+        {
+            string strRes = string.Empty;
+            if (IsOk)
+                foreach (var str in Data) 
+                {
+                    strRes += str + " ";
+                }
+            return (strRes);
+        }
     }
     public class QJDataList
     {

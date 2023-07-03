@@ -24,8 +24,14 @@ namespace PluginWebAPI
                 {
                     //从客户端收到信息
                     string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
+
+
+                    client.Logger.Info("###################Start#################\r\n");
+                    client.Logger.Info(mes + "\r\n");
+                    client.Logger.Info("####################End##################\r\n");
+                    //Console.WriteLine(mes);
                     var packRes = Newtonsoft.Json.JsonConvert.DeserializeObject<BaseDataModel>(mes);
-                    client.Logger.Info(packRes.iRWDataOperation.ToString());
+                    
                     if (packRes.iRWDataOperation == IRWDataOperation.Read)
                     {
                         try
@@ -46,7 +52,10 @@ namespace PluginWebAPI
                             var writeModel = Newtonsoft.Json.JsonConvert.DeserializeObject<WriteDataModel>(mes);
                             //client.Logger.Info($"地址:{writeModel.Address}");
                         }
-                        catch (Exception ex) { }
+                        catch (Exception ex) 
+                        {
+                            client.Logger.Info("Error : " + ex.Message);
+                        }
                     }
 
                     //client.Logger.Info($"已從{client.ID}接收到信息：{mes}");

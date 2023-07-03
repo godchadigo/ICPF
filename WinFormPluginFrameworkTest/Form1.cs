@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace WinFormPluginFrameworkTest
 {
-    public partial class Form1 : Form 
+    public partial class Form1 : Form
     {
         private PFC.PFC pfc;
         public Form1()
@@ -16,15 +16,15 @@ namespace WinFormPluginFrameworkTest
 
         private void LSManager_TEvent(object? sender, EventArgs e)
         {
-            
+
         }
 
         private void Program_ProgramCreated(object? sender, EventArgs e)
         {
-            
+
         }
 
-        
+
 
         //***** ¨Æ¥ó°»´ú *****//
         public void onDeviceConnect(string deviceName)
@@ -40,19 +40,11 @@ namespace WinFormPluginFrameworkTest
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            
+
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            Task.Run(async () =>
-            {
-                while (true)
-                {
-
-                    await Task.Delay(1000);
-                }                
-            });
             var test = new ReadDataModel()
             {
                 DeviceName = "MBUS_1",
@@ -61,9 +53,24 @@ namespace WinFormPluginFrameworkTest
                 DatasType = DataType.Int16,
             };
 
-            var result = pfc.GetData(test);
-            Debug.WriteLine(result.Message);
+            Task.Run(async() => {
+                while (true)
+                {                    
+                    this.BeginInvoke(new Action(delegate
+                    {
+                        var result = pfc.GetData(test);
+                        richTextBox1.AppendText(result.Message.ToString() + "\r\n");
+                        Debug.WriteLine(result.Message);
+                    }));
+                                        
+                    await Task.Delay(50);
+                }                                
+            });            
+        }
 
+        private void button2_Click(object sender, EventArgs e)
+        {
+            richTextBox1.Clear();
         }
     }
 }
