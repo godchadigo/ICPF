@@ -11,7 +11,12 @@ using System.Xml.Linq;
 
 namespace ConsolePluginTest
 {
-    
+
+    public enum IRWDataOperation
+    {
+        Read = 1,
+        Write = 2
+    }
     public interface IRWData
     {
         /// <summary>
@@ -25,6 +30,14 @@ namespace ConsolePluginTest
         /// 寫入:寫入起點
         /// </summary>
         string Address { get; set; }
+        IRWDataOperation iRWDataOperation { get; }
+    }
+    public class BaseDataModel : IRWData
+    {
+        public string DeviceName { get; set; }
+        public string Address { get; set; }
+        public IRWDataOperation iRWDataOperation { get; set; }
+
     }
     public class ReadDataModel : IRWData
     {
@@ -32,6 +45,7 @@ namespace ConsolePluginTest
         public string Address { get; set; }
         public ushort ReadLength { get; set; }
         public DataType DatasType { get; set; }
+        public IRWDataOperation iRWDataOperation { get; } = IRWDataOperation.Read;
 
     }
     public class WriteDataModel : IRWData
@@ -40,6 +54,7 @@ namespace ConsolePluginTest
         public string Address { get; set; }
         public object[] Datas { get; set; }
         public DataType DatasType { get; set; }
+        public IRWDataOperation iRWDataOperation { get; } = IRWDataOperation.Write;
     }
     public enum DataType
     {

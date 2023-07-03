@@ -11,6 +11,7 @@ namespace PluginWebAPI
 {
     public class Main : PluginFramework.IPlugin
     {
+        private Program Core;
         public void onLoading()
         {
             Task.Run(() =>
@@ -23,9 +24,34 @@ namespace PluginWebAPI
                 {
                     //从客户端收到信息
                     string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
-                    client.Logger.Info($"已从{client.ID}接收到信息：{mes}");
+                    var packRes = Newtonsoft.Json.JsonConvert.DeserializeObject<BaseDataModel>(mes);
+                    client.Logger.Info(packRes.iRWDataOperation.ToString());
+                    if (packRes.iRWDataOperation == IRWDataOperation.Read)
+                    {
+                        try
+                        {
+                            var readModel = Newtonsoft.Json.JsonConvert.DeserializeObject<ReadDataModel>(mes);
+                            //client.Logger.Info($"地址:{readModel.Address}");
+                            var value = Core.GetData(readModel).Result;
+                            var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(value);
+                            client.Send(jsonStr);
+                            client.Logger.Info(jsonStr);
+                        }
+                        catch (Exception ex) { }
+                    }
+                    if (packRes.iRWDataOperation == IRWDataOperation.Write)
+                    {
+                        try
+                        {
+                            var writeModel = Newtonsoft.Json.JsonConvert.DeserializeObject<WriteDataModel>(mes);
+                            //client.Logger.Info($"地址:{writeModel.Address}");
+                        }
+                        catch (Exception ex) { }
+                    }
 
-                    client.Send(mes);//将收到的信息直接返回给发送方
+                    //client.Logger.Info($"已從{client.ID}接收到信息：{mes}");
+
+                    //client.Send(mes);//将收到的信息直接返回给发送方
 
                     //client.Send("id",mes);//将收到的信息返回给特定ID的客户端
 
@@ -34,7 +60,7 @@ namespace PluginWebAPI
                     {
                         if (clientId != client.ID)//不给自己发
                         {
-                            service.Send(clientId, mes);
+                            //service.Send(clientId, mes);
                         }
                     }
                 };
@@ -52,6 +78,10 @@ namespace PluginWebAPI
                     .Start();//启动
                 //Console.ReadKey();
             });
+        }
+        public void SetInstance(object dd)
+        {
+            Core = (Program)dd;
         }
     }
 }

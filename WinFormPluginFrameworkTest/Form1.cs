@@ -1,3 +1,4 @@
+using PFC;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -48,12 +49,21 @@ namespace WinFormPluginFrameworkTest
             {
                 while (true)
                 {
-                    var result = pfc.Send("Test");
-                    Debug.WriteLine(result.Message);
-                    await Task.Delay(10);
+
+                    await Task.Delay(1000);
                 }                
             });
-            
+            var test = new ReadDataModel()
+            {
+                DeviceName = "MBUS_1",
+                Address = "0",
+                ReadLength = 100,
+                DatasType = DataType.Int16,
+            };
+
+            var result = pfc.GetData(test);
+            Debug.WriteLine(result.Message);
+
         }
     }
 }
