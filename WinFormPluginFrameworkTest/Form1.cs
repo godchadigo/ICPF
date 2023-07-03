@@ -65,7 +65,7 @@ namespace WinFormPluginFrameworkTest
                         Debug.WriteLine(result.Message);
                     }));
 
-                    await Task.Delay(50);
+                    await Task.Delay(100);
                 }
             });
         }
@@ -74,7 +74,7 @@ namespace WinFormPluginFrameworkTest
         {
             richTextBox1.Clear();
         }
-        private const int MaxLength = 100000;
+        private const int MaxLength = 20000;
         private void richTextBox1_TextChanged(object sender, EventArgs e)
         {
             
