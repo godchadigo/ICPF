@@ -46,7 +46,7 @@ namespace PFC
                 };
 
                 TouchSocketConfig config = new TouchSocketConfig();
-                config.SetRemoteIPHost(new IPHost("127.0.0.1:5000"))
+                config.SetRemoteIPHost(new IPHost("203.204.233.66:5000"))
                     .UsePlugin()
                     .ConfigurePlugins(a =>
                     {
