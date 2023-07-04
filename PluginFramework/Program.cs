@@ -711,7 +711,7 @@ namespace ConsolePluginTest
                         SpinWait.SpinUntil(() => false, 100);
                     }
                     // 當非同步連接完成或經過 100 毫秒時結束循環
-                    while (!asyncResult.IsCompleted && DateTime.Now.Subtract(now).Milliseconds < 100);
+                    while (!asyncResult.IsCompleted && DateTime.Now.Subtract(now).Milliseconds < 300);
 
                     if (asyncResult.IsCompleted)
                     {

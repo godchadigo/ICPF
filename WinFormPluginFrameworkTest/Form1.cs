@@ -29,15 +29,32 @@ namespace WinFormPluginFrameworkTest
                 ReadLength = 100,
                 DatasType = DataType.Int32,
             };
+            var mc = new ReadDataModel()
+            {
+                DeviceName = "MC_1",
+                Address = "D0",
+                ReadLength = 100,
+                DatasType = DataType.Int32,
+            };
             Task.Run(async () => {
                 while (true)
                 {
+                    /*
                     var result = pfc.GetData(test);
                     this.BeginInvoke(new Action(() => {
                         richTextBox1.AppendText(result.Data.ToString() + "\r\n");
                         Debug.WriteLine(result.Message);
-                    }));                    
-                    await Task.Delay(1000);
+                    }));
+                    */
+                    var mcResult = pfc.GetData(mc);
+                    this.BeginInvoke(new Action(() => {
+                        if (mcResult.IsOk)
+                        {
+                            richTextBox1.AppendText(mcResult.Data.ToString() + "\r\n");
+                            Debug.WriteLine(mcResult.Message);
+                        }                        
+                    }));
+                    await Task.Delay(10);
                 }
             });                       
         }
