@@ -155,7 +155,7 @@ namespace ConsolePluginTest
         private static Program p;
         private static List<IPlugin> plugins = new List<IPlugin>();
         public static string Test { get; set; } = "test123456";
-        private static List<AssemblyLoadContext> context = new List<AssemblyLoadContext>();
+        private static List<AssemblyLoadContext> context { get; set; } = new List<AssemblyLoadContext>();
 
         public static Program GetInstance() 
         {
@@ -188,7 +188,10 @@ namespace ConsolePluginTest
             LoadPlugins();
            
 
-          
+            foreach (var pl in context)
+            {
+                pl.Unload();
+            }
             #endregion
 
             //通知插件啟動
@@ -230,6 +233,7 @@ namespace ConsolePluginTest
             
 
         }
+        private static Assembly pa;
         private static void LoadPlugins()
         {
             List<string> pluginpath = p.FindPlugin();
@@ -245,11 +249,15 @@ namespace ConsolePluginTest
                     if (asmname != string.Empty)
                     {// 创建自定义的程序集加载上下文
                         var contextModel = new AssemblyLoadContext(Guid.NewGuid().ToString("N"), true);
+                        
                         context.Add(contextModel);
 
                         // 加载插件的 DLL 文件到加载上下文
                         Assembly pluginAssembly = contextModel.LoadFromAssemblyPath(asmfile);
-                        
+
+                        pa = pluginAssembly;
+
+                        contextModel.Resolving += _AssemblyLoadContext_Resolving;
                         // 在加载上下文中实例化插件类并使用
                         Type[] types = pluginAssembly.GetExportedTypes();
                         foreach (Type type in types)
@@ -284,6 +292,12 @@ namespace ConsolePluginTest
                     Console.Write(ex.Message);
                 }
             }
+        }
+
+        private static Assembly _AssemblyLoadContext_Resolving(AssemblyLoadContext arg1, AssemblyName arg2)
+        {
+            Console.WriteLine($"加載{arg2.Name}");
+            return pa;
         }
         //查找所有插件的路径
         private List<string> FindPlugin()
