@@ -9,7 +9,7 @@ namespace PFC
     {
         public PFC()
         {
-
+            Enterprise.Default.LicenceKey = "C22523CEC3DDDE276109E4B062CE6CA41FE01935603E304660E4735DF39FB39817668A4A48C1D6F5B1218E67972DF8CDD9768A208CB6A719C53BF9B7191AD60DD1AF10500BA9EF7080A837E517C8D38B";
         }
         private static TcpClient tcpClient = new TcpClient();
         public void Connect()
