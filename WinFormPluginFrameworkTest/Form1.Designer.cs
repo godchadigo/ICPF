@@ -28,54 +28,67 @@
         /// </summary>
         private void InitializeComponent()
         {
-            richTextBox1 = new RichTextBox();
-            button1 = new Button();
-            button2 = new Button();
-            SuspendLayout();
+            this.richTextBox1 = new System.Windows.Forms.RichTextBox();
+            this.button1 = new System.Windows.Forms.Button();
+            this.button2 = new System.Windows.Forms.Button();
+            this.button3 = new System.Windows.Forms.Button();
+            this.SuspendLayout();
             // 
             // richTextBox1
             // 
-            richTextBox1.Location = new Point(12, 12);
-            richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new Size(1440, 476);
-            richTextBox1.TabIndex = 0;
-            richTextBox1.Text = "";
-            richTextBox1.TextChanged += richTextBox1_TextChanged;
+            this.richTextBox1.Location = new System.Drawing.Point(12, 12);
+            this.richTextBox1.Name = "richTextBox1";
+            this.richTextBox1.Size = new System.Drawing.Size(1440, 476);
+            this.richTextBox1.TabIndex = 0;
+            this.richTextBox1.Text = "";
+            this.richTextBox1.TextChanged += new System.EventHandler(this.richTextBox1_TextChanged);
             // 
             // button1
             // 
-            button1.Font = new Font("標楷體", 18F, FontStyle.Regular, GraphicsUnit.Point);
-            button1.Location = new Point(12, 494);
-            button1.Name = "button1";
-            button1.Size = new Size(707, 75);
-            button1.TabIndex = 1;
-            button1.Text = "從御德家拿資料";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
+            this.button1.Font = new System.Drawing.Font("標楷體", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.button1.Location = new System.Drawing.Point(12, 494);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(312, 75);
+            this.button1.TabIndex = 1;
+            this.button1.Text = "讀取";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // button2
             // 
-            button2.Font = new Font("標楷體", 18F, FontStyle.Regular, GraphicsUnit.Point);
-            button2.Location = new Point(725, 494);
-            button2.Name = "button2";
-            button2.Size = new Size(727, 75);
-            button2.TabIndex = 2;
-            button2.Text = "清除面板";
-            button2.UseVisualStyleBackColor = true;
-            button2.Click += button2_Click;
+            this.button2.Font = new System.Drawing.Font("標楷體", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.button2.Location = new System.Drawing.Point(725, 494);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(727, 75);
+            this.button2.TabIndex = 2;
+            this.button2.Text = "清除面板";
+            this.button2.UseVisualStyleBackColor = true;
+            this.button2.Click += new System.EventHandler(this.button2_Click);
+            // 
+            // button3
+            // 
+            this.button3.Font = new System.Drawing.Font("標楷體", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.button3.Location = new System.Drawing.Point(347, 494);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(312, 75);
+            this.button3.TabIndex = 3;
+            this.button3.Text = "寫入";
+            this.button3.UseVisualStyleBackColor = true;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
             // Form1
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1464, 581);
-            Controls.Add(button2);
-            Controls.Add(button1);
-            Controls.Add(richTextBox1);
-            Name = "Form1";
-            Text = "Form1";
-            Load += Form1_Load;
-            ResumeLayout(false);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(1464, 581);
+            this.Controls.Add(this.button3);
+            this.Controls.Add(this.button2);
+            this.Controls.Add(this.button1);
+            this.Controls.Add(this.richTextBox1);
+            this.Name = "Form1";
+            this.Text = "Form1";
+            this.ResumeLayout(false);
+
         }
 
         #endregion
@@ -83,5 +96,6 @@
         private RichTextBox richTextBox1;
         private Button button1;
         private Button button2;
+        private Button button3;
     }
 }

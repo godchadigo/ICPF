@@ -15,79 +15,77 @@ namespace WinFormPluginFrameworkTest
             pfc.Connect();
         }
 
-        private void LSManager_TEvent(object? sender, EventArgs e)
-        {
-
-        }
-
-        private void Program_ProgramCreated(object? sender, EventArgs e)
-        {
-
-        }
-
-
-
-        //***** 事件偵測 *****//
-        public void onDeviceConnect(string deviceName)
-        {
-            //Console.WriteLine($"偵測到來自主機端發出的 {deviceName} 設備上線!");
-            richTextBox1.AppendText($"偵測到來自主機端發出的 {deviceName} 設備上線!");
-        }
-        public void onDeviceDisconnect(string deviceName)
-        {
-            //Console.WriteLine($"偵測到來自主機端發出的 {deviceName} 設備斷線!");
-            richTextBox1.AppendText($"偵測到來自主機端發出的 {deviceName} 設備斷線!");
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
-
+        /// <summary>
+        /// 讀取
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void button1_Click(object sender, EventArgs e)
         {
             var test = new ReadDataModel()
             {
-                DeviceName = "MBUS_1",
-                Address = "0",
+                DeviceName = "Keyence8500_1",
+                Address = "DM0",
                 ReadLength = 100,
-                DatasType = DataType.Int16,
+                DatasType = DataType.Int32,
             };
-
-            Task.Run(async () =>
-            {
+            Task.Run(async () => {
                 while (true)
                 {
-                    this.BeginInvoke(new Action(delegate
-                    {
-                        var result = pfc.GetData(test);
-                        richTextBox1.AppendText(result.Message.ToString() + "\r\n");
+                    var result = pfc.GetData(test);
+                    this.BeginInvoke(new Action(() => {
+                        richTextBox1.AppendText(result.Data.ToString() + "\r\n");
                         Debug.WriteLine(result.Message);
-                    }));
-
-                    await Task.Delay(100);
+                    }));                    
+                    await Task.Delay(1000);
                 }
-            });
+            });                       
         }
-
+        private int count = 9999999;
+        /// <summary>
+        /// 寫入
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void button3_Click(object sender, EventArgs e)
+        {
+            var test = new WriteDataModel()
+            {
+                DeviceName = "Keyence8500_1",
+                Address = "DM0",
+                Datas = new object[] { count++ , count , count, count, count, count, count, count, },
+                DatasType = DataType.Int32,
+            };
+            var result = pfc.SetData(test);
+            richTextBox1.AppendText(result.Message.ToString() + "\r\n");
+        }
+        /// <summary>
+        /// 清除
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void button2_Click(object sender, EventArgs e)
         {
             richTextBox1.Clear();
         }
+
+        #region Event
         private const int MaxLength = 20000;
         private void richTextBox1_TextChanged(object sender, EventArgs e)
         {
-            
+
             if (richTextBox1.TextLength > MaxLength)
             {
-                
+
                 richTextBox1.Clear();
             }
             else
-            {                
+            {
                 richTextBox1.SelectionStart = richTextBox1.TextLength;
                 richTextBox1.ScrollToCaret();
             }
         }
+        #endregion
+
     }
 }
