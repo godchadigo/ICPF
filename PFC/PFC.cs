@@ -68,7 +68,9 @@ namespace PFC
                     .ConfigurePlugins(a =>
                     {
                         a.UseReconnection(-1, true, 100);
-                    });
+                    })
+                    .SetDataHandlingAdapter(() => { return new TerminatorPackageAdapter("\r\n"); })//配置终止字符适配器，以\r\n结尾。
+                    ;
 
                 tcpClient.Setup(config);
 
@@ -138,7 +140,7 @@ namespace PFC
             {
                 if (isConnected)
                 {
-                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model , Newtonsoft.Json.Formatting.Indented);
+                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model , Newtonsoft.Json.Formatting.None);
                     
                     //调用GetWaitingClient获取到IWaitingClient的对象。
                     waitClient = tcpClient.GetWaitingClient(new WaitingOptions()
@@ -152,7 +154,7 @@ namespace PFC
                     byte[] returnData = waitClient.SendThenReturn(packStr);
                     //tcpClient.Logger.Info($"收到回应消息：{Encoding.UTF8.GetString(returnData)}");                    
                     var data = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(Encoding.UTF8.GetString(returnData));
-                    return new OperationModel() { IsOk = true, Message = "通訊成功 : " , Data = data };
+                    return new OperationModel() { IsOk = true, DeviceName = data.DeviceName, Message = data.Message , Data = data };
                     
                     //return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
                 }
@@ -175,15 +177,21 @@ namespace PFC
             {
                 if (isConnected)
                 {
-                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model, Newtonsoft.Json.Formatting.Indented);
-                    tcpClient.Send(jsonStr);
-
-                    return new OperationModel() { IsOk = true, Message = "通訊成功 : " + tcpClient.Received };
-                    while (!ReceviceFlag || false)
+                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model, Newtonsoft.Json.Formatting.None);
+                    //调用GetWaitingClient获取到IWaitingClient的对象。
+                    waitClient = tcpClient.GetWaitingClient(new WaitingOptions()
                     {
-                        
-                    }
-                    return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
+                        AdapterFilter = AdapterFilter.AllAdapter,//表示发送和接收的数据都会经过适配器
+                        BreakTrigger = true,//表示当连接断开时，会立即触发
+                        ThrowBreakException = true//表示当连接断开时，是否触发异常
+                    });
+                    //然后使用SendThenReturn。
+                    var packStr = Encoding.UTF8.GetBytes(jsonStr);
+                    byte[] returnData = waitClient.SendThenReturn(packStr);
+                    //tcpClient.Logger.Info($"收到回应消息：{Encoding.UTF8.GetString(returnData)}");                    
+                    var data = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(Encoding.UTF8.GetString(returnData));
+                    return new OperationModel() { IsOk = true, DeviceName = data.DeviceName, Message = data.Message, Data = new QJDataArray() { Data = model.Datas} };
+
                 }
                 else
                 {
@@ -223,6 +231,7 @@ namespace PFC
     public class OperationModel
     {
         public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
         public string Message { get; set; }
         public QJDataArray Data { get; set; }
         public override string ToString()
@@ -273,6 +282,25 @@ namespace PFC
         public object[] Datas { get; set; }
         public DataType DatasType { get; set; }
         public IRWDataOperation iRWDataOperation { get; } = IRWDataOperation.Write;
+        public override string ToString()
+        {
+            string strRes = string.Empty;
+            if (Datas != null)
+            {
+                if (Datas.Length > 0)
+                    foreach (var str in Datas)
+                    {
+                        strRes += str.ToString() + " ";
+                    }                
+            }
+            else
+            {
+                strRes = "";
+            }
+
+            return string.Format("寫入設備名稱:{0}，寫入地址:{1}，寫入數據:{2}，寫入類型{3}" , DeviceName , Address , strRes , DatasType.ToString() );
+        }
+
     }
     public enum DataType
     {
@@ -301,6 +329,7 @@ namespace PFC
     public class QJDataArray
     {
         public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
         public object[] Data { get; set; }
         public DataType DataType { get; set; }
         public string Message { get; set; }
@@ -312,7 +341,7 @@ namespace PFC
                 if (IsOk && Data.Length > 0)
                     foreach (var str in Data)
                     {
-                        strRes += str + " ";
+                        strRes += str.ToString() + " ";
                     }
             }
             else

@@ -2,6 +2,7 @@
 using Nancy;
 using Newtonsoft;
 using Newtonsoft.Json.Linq;
+using PluginFramework;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -23,25 +24,7 @@ namespace PluginB
             Task.Run(async () => {
                 while (!token.IsCancellationRequested)
                 {
-                    //Console.WriteLine("PluginA : " + MemoryShareManager.instance.Data);
-                    //Core.DoSomething ("PluginA");
-                    var result = Core.GetData(new ReadDataModel()
-                    {
-                        DeviceName = "Modbus_Tcp_工廠_鑄造區_機臺2",
-                        Address = "10",
-                        ReadLength = 10,
-                        DatasType = DataType.Int16,
-                    });
-
-                    if (result.IsOk)
-                    {
-                        Console.WriteLine(string.Format(PluginName + "執行狀態:{0} 數據: {1}", result.IsOk, DecodeData(result)));
-                    }
-                    else
-                    {
-                        Console.WriteLine(string.Format(PluginName + "執行狀態:{0} 錯誤訊息: {1}", result.IsOk, result.Message));
-                    }
-
+                    
                     await Task.Delay(1000);
                 }
             }, token);

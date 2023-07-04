@@ -1,4 +1,5 @@
 using PFC;
+using System.Data;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -36,7 +37,15 @@ namespace WinFormPluginFrameworkTest
                 ReadLength = 100,
                 DatasType = DataType.Int32,
             };
-            Task.Run(async () => {
+            var mbus = new ReadDataModel()
+            {
+                DeviceName = "MBUS_1",
+                Address = "0",
+                ReadLength = 100,
+                DatasType = DataType.Int32,
+            };
+            Task.Run(async () =>
+            {
                 while (true)
                 {
                     /*
@@ -46,17 +55,18 @@ namespace WinFormPluginFrameworkTest
                         Debug.WriteLine(result.Message);
                     }));
                     */
-                    var mcResult = pfc.GetData(mc);
-                    this.BeginInvoke(new Action(() => {
+                    var mcResult = pfc.GetData(mbus);
+                    this.BeginInvoke(new Action(() =>
+                    {
                         if (mcResult.IsOk)
                         {
-                            richTextBox1.AppendText(mcResult.Data.ToString() + "\r\n");
+                            richTextBox1.AppendText(mcResult.DeviceName + " # " + mcResult.Message + " | " + mcResult.Data.ToString() + "\r\n");
                             Debug.WriteLine(mcResult.Message);
-                        }                        
+                        }
                     }));
-                    await Task.Delay(10);
+                    await Task.Delay(1);
                 }
-            });                       
+            });
         }
         private int count = 9999999;
         /// <summary>
@@ -70,11 +80,18 @@ namespace WinFormPluginFrameworkTest
             {
                 DeviceName = "Keyence8500_1",
                 Address = "DM0",
-                Datas = new object[] { count++ , count , count, count, count, count, count, count, },
+                Datas = new object[] { count++, count, count, count, count, count, count, count, },
                 DatasType = DataType.Int32,
             };
-            var result = pfc.SetData(test);
-            richTextBox1.AppendText(result.Message.ToString() + "\r\n");
+            var mbus = new WriteDataModel()
+            {
+                DeviceName = "MBUS_1",
+                Address = "0",
+                Datas = new object[] { count++, count, count, count, count, count, count, count, },
+                DatasType = DataType.Int32,
+            };
+            var result = pfc.SetData(mbus);
+            richTextBox1.AppendText(result.DeviceName + " # " + result.Message + " | " + mbus.ToString() + "\r\n");
         }
         /// <summary>
         /// ²M°£

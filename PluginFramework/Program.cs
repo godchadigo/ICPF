@@ -1,12 +1,12 @@
 ﻿using HslCommunication;
 using HslCommunication.Core.Net;
-using LibaryShare;
 using Microsoft.International.Converters.TraditionalChineseToSimplifiedConverter;
 using Newtonsoft.Json;
 using PluginFramework;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Xml.Linq;
 
 namespace ConsolePluginTest
@@ -83,6 +83,7 @@ namespace ConsolePluginTest
     public class QJDataArray
     {
         public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
         public object[] Data { get; set; }
         public DataType DataType { get; set; }
         public string Message { get; set; }
@@ -154,16 +155,13 @@ namespace ConsolePluginTest
         private static Program p;
         private static List<IPlugin> plugins = new List<IPlugin>();
         public static string Test { get; set; } = "test123456";
+        private static List<AssemblyLoadContext> context = new List<AssemblyLoadContext>();
 
         public static Program GetInstance() 
         {
             return p;
         }
         
-        public void Start()
-        {
-            ConsolePluginTest.Program.Main(null);
-        }
         static void Main(string[] args)
         {
             
@@ -180,44 +178,17 @@ namespace ConsolePluginTest
             //File.WriteAllText(filePath, jsonString);
             //***** -測試空間- *****//
             //return;
+
+            p = new Program();
+
             CommunicationTask();
             
             #region 插件反射載入
-            p = new Program();            
-            List<string> pluginpath = p.FindPlugin();
-                   
-            pluginpath = p.DeleteInvalidPlungin(pluginpath);
+            
+            LoadPlugins();
+           
 
-            foreach (string filename in pluginpath)
-            {
-                try
-                {
-                    //获取文件名
-                    string asmfile = filename;
-                    string asmname = Path.GetFileNameWithoutExtension(asmfile);
-                    if (asmname != string.Empty)
-                    {
-                        // 利用反射,构造DLL文件的实例
-                        Assembly asm = Assembly.LoadFile(asmfile);
-                        //利用反射,从程序集(DLL)中,提取类,并把此类实例化
-                        Type[] t = asm.GetExportedTypes();
-                        foreach (Type type in t)
-                        {
-                            if (type.GetInterface("IPlugin") != null)
-                            {
-                                IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
-
-                                plugins.Add(plugin);                                
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.Write(ex.Message);
-                }
-            }
-
+          
             #endregion
 
             //通知插件啟動
@@ -229,6 +200,7 @@ namespace ConsolePluginTest
 
             //啟動事件偵聽任務
             EventTask();
+            
 
             //LSManager.Instance.Test();
             //偵測停止指令 以及核心迴圈
@@ -238,6 +210,8 @@ namespace ConsolePluginTest
 
                 if (input.Equals("stop", StringComparison.OrdinalIgnoreCase))
                 {
+                    Console.WriteLine("隨意按下任何按鍵即可退出...");
+                    Console.ReadKey();
                     break; // 停止程序
                 }                                                
             }            
@@ -255,6 +229,61 @@ namespace ConsolePluginTest
             }
             
 
+        }
+        private static void LoadPlugins()
+        {
+            List<string> pluginpath = p.FindPlugin();
+            pluginpath = p.DeleteInvalidPlungin(pluginpath);
+
+            foreach (string filename in pluginpath)
+            {
+                try
+                {
+                    //获取文件名
+                    string asmfile = filename;
+                    string asmname = Path.GetFileNameWithoutExtension(asmfile);
+                    if (asmname != string.Empty)
+                    {// 创建自定义的程序集加载上下文
+                        var contextModel = new AssemblyLoadContext(Guid.NewGuid().ToString("N"), true);
+                        context.Add(contextModel);
+
+                        // 加载插件的 DLL 文件到加载上下文
+                        Assembly pluginAssembly = contextModel.LoadFromAssemblyPath(asmfile);
+                        
+                        // 在加载上下文中实例化插件类并使用
+                        Type[] types = pluginAssembly.GetExportedTypes();
+                        foreach (Type type in types)
+                        {
+                            if (typeof(IPlugin).IsAssignableFrom(type))
+                            {
+                                IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
+                                plugins.Add(plugin);
+                            }
+                        }
+                        
+                        //context.Unload();
+                        /*
+                        Type[] t = asm.GetExportedTypes();
+                        foreach (Type type in t)
+                        {
+                            if (type.GetInterface("IPlugin") != null)
+                            {
+                                IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
+
+                                plugins.Add(plugin);                                
+                            }
+                        }
+                        */
+                        //DLL一但被加載除非主程式關閉，否則無法刪除或修改
+                        // 卸载加载上下文以释放程序集资源
+                        //context.Unload();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Write(ex.Message);
+                }
+            }
         }
         //查找所有插件的路径
         private List<string> FindPlugin()
@@ -475,6 +504,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(bool16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = bool16Res.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Int16:
                         var int16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
@@ -485,6 +515,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(int16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int16Res.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt16:
                         var uint16Res = await pack.ReadUInt16Async(model.Address, model.ReadLength);
@@ -495,6 +526,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(uint16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint16Res.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
            
                     case DataType.Int32:
@@ -506,6 +538,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(int32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int32Res.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt32:
                         var uint32Res = await pack.ReadUInt32Async(model.Address, model.ReadLength);
@@ -516,6 +549,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(uint32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint32Res.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Int64:
                         var int64Res = await pack.ReadInt64Async(model.Address, model.ReadLength);
@@ -526,6 +560,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(int64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int64Res.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt64:
                         var uint64Res = await pack.ReadUInt64Async(model.Address, model.ReadLength);
@@ -536,6 +571,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(uint64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint64Res.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Float:
                         var floatRes = await pack.ReadFloatAsync(model.Address, model.ReadLength);
@@ -546,6 +582,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(floatRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = floatRes.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Double:
                         var doubleRes = await pack.ReadDoubleAsync(model.Address, model.ReadLength);
@@ -556,6 +593,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(doubleRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = doubleRes.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.String:
                         var stringRes = await pack.ReadStringAsync(model.Address, model.ReadLength);
@@ -566,6 +604,7 @@ namespace ConsolePluginTest
                         rData.Message = ChineseConverter.Convert(stringRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = stringRes.IsSuccess;
                         rData.DataType = model.DatasType;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     default:
                         // 適當的錯誤處理
@@ -596,54 +635,63 @@ namespace ConsolePluginTest
                         var bool16Res = await pack.WriteAsync(model.Address, boolArray);
                         rData.Message = ChineseConverter.Convert(bool16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = bool16Res.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Int16:
                         short[] shortArray = model.Datas.Select(Convert.ToInt16).ToArray();
                         var int16Res = await pack.WriteAsync(model.Address, shortArray);
                         rData.Message = ChineseConverter.Convert(int16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int16Res.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt16:
                         ushort[] ushortArray = model.Datas.Select(Convert.ToUInt16).ToArray();
                         var uint16Res = await pack.WriteAsync(model.Address, ushortArray);
                         rData.Message = ChineseConverter.Convert(uint16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint16Res.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Int32:
                         int[] intArray = model.Datas.Select(Convert.ToInt32).ToArray();
                         var int32Res = await pack.WriteAsync(model.Address, intArray);
                         rData.Message = ChineseConverter.Convert(int32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int32Res.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt32:
                         uint[] uintArray = model.Datas.Select(Convert.ToUInt32).ToArray();
                         var uint32Res = await pack.WriteAsync(model.Address, uintArray);
                         rData.Message = ChineseConverter.Convert(uint32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint32Res.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Int64:
                         long[] longArray = model.Datas.Select(Convert.ToInt64).ToArray();
                         var int64Res = await pack.WriteAsync(model.Address, longArray);
                         rData.Message = ChineseConverter.Convert(int64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int64Res.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt64:
                         ulong[] ulongArray = model.Datas.Select(Convert.ToUInt64).ToArray();
                         var uint64Res = await pack.WriteAsync(model.Address, ulongArray);
                         rData.Message = ChineseConverter.Convert(uint64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint64Res.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Float:
                         float[] floatArray = model.Datas.Select(Convert.ToSingle).ToArray();
                         var floatRes = await pack.WriteAsync(model.Address, floatArray);
                         rData.Message = ChineseConverter.Convert(floatRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = floatRes.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Double:
                         double[] doubleArray = model.Datas.Select(Convert.ToDouble).ToArray();
                         var doubleRes = await pack.WriteAsync(model.Address, doubleArray);
                         rData.Message = ChineseConverter.Convert(doubleRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = doubleRes.IsSuccess;
+                        rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.String:
                         string[] stringArray = model.Datas.Select(x => x.ToString()).ToArray();
@@ -652,6 +700,7 @@ namespace ConsolePluginTest
                             var stringRes = await pack.WriteAsync(model.Address, stringArray[0]);
                             rData.Message = ChineseConverter.Convert(stringRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                             rData.IsOk = stringRes.IsSuccess;
+                            rData.DeviceName = model.DeviceName;
                         }                        
                         break;
                     default:

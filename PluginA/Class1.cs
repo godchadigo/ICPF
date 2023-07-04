@@ -80,8 +80,8 @@ namespace PluginA
 
         public void SetInstance(object dd)
         {
-            Program program = (Program)dd;
-            Core = program;
+            //Program program = (Program)dd;
+            //Core = program;
         }
 
         //***** 事件偵測 *****//

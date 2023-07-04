@@ -87,7 +87,8 @@ namespace PluginWebAPI
                     .ConfigurePlugins(a =>
                     {
                         //a.Add();//此处可以添加插件
-                    }))
+                    })
+                    .SetDataHandlingAdapter(() => { return new TerminatorPackageAdapter("\r\n"); }))//配置终止字符适配器，以\r\n结尾。                                    
                     .Start();//启动
                 //Console.ReadKey();
             });
