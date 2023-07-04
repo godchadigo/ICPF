@@ -16,8 +16,9 @@ namespace PluginA
             Console.WriteLine(PluginName + " Loading...");
             // 获取 CancellationToken
             CancellationToken token = cts.Token;
+            /*
             Task.Run(async () => {
-                while (!token.IsCancellationRequested)
+                while (!token.IsCancellationRequested || false)
                 {
                     //Console.WriteLine("PluginA : " + MemoryShareManager.instance.Data);
                     //Core.DoSomething ("PluginA");
@@ -68,7 +69,7 @@ namespace PluginA
                     await Task.Delay(1000);
                 }
             }, token);
-
+            */
         }
 
         public void onCloseing()

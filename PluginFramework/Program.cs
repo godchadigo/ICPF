@@ -105,9 +105,10 @@ namespace ConsolePluginTest
         McProtocol_Tcp = 2,
         Modbus_Tcp = 3,
         Vigor_Tcp = 4,
+        SiemensS7Net = 5
     }
     public interface IDeviceConfig
-    {
+    {        
         string DeviceName { get; set; }
         CommunicationInterface CommunicationInterface { get; }
         CommunicationProtocol CommunicationProtocol { get; set; }        
@@ -229,7 +230,7 @@ namespace ConsolePluginTest
             //啟動事件偵聽任務
             EventTask();
 
-            LSManager.Instance.Test();
+            //LSManager.Instance.Test();
             //偵測停止指令 以及核心迴圈
             while (true)
             {                
@@ -466,24 +467,111 @@ namespace ConsolePluginTest
                 switch (model.DatasType)
                 {
                     case DataType.Bool:
+                        var bool16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
+                        if (bool16Res.IsSuccess)
+                        {
+                            rData.Data = bool16Res.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(bool16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = bool16Res.IsSuccess;
+                        rData.DataType = model.DatasType;
                         break;
                     case DataType.Int16:
                         var int16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
-                        if (int16Res.IsSuccess) rData.Data = int16Res.Content.Select(x => (object)x).ToArray();
-                        if (!int16Res.IsSuccess) rData.Message = ChineseConverter.Convert(int16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        if (int16Res.IsSuccess)
+                        {
+                            rData.Data = int16Res.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(int16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int16Res.IsSuccess;
                         rData.DataType = model.DatasType;
-
                         break;
                     case DataType.UInt16:
                         var uint16Res = await pack.ReadUInt16Async(model.Address, model.ReadLength);
-                        if (uint16Res.IsSuccess) rData.Data = uint16Res.Content.Select(x => (object)x).ToArray();
-                        if (!uint16Res.IsSuccess) rData.Message = ChineseConverter.Convert(uint16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        if (uint16Res.IsSuccess)
+                        {
+                            rData.Data = uint16Res.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(uint16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint16Res.IsSuccess;
                         rData.DataType = model.DatasType;
-
+                        break;
+           
+                    case DataType.Int32:
+                        var int32Res = await pack.ReadInt32Async(model.Address, model.ReadLength);
+                        if (int32Res.IsSuccess)
+                        {
+                            rData.Data = int32Res.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(int32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = int32Res.IsSuccess;
+                        rData.DataType = model.DatasType;
+                        break;
+                    case DataType.UInt32:
+                        var uint32Res = await pack.ReadUInt32Async(model.Address, model.ReadLength);
+                        if (uint32Res.IsSuccess)
+                        {
+                            rData.Data = uint32Res.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(uint32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = uint32Res.IsSuccess;
+                        rData.DataType = model.DatasType;
+                        break;
+                    case DataType.Int64:
+                        var int64Res = await pack.ReadInt64Async(model.Address, model.ReadLength);
+                        if (int64Res.IsSuccess)
+                        {
+                            rData.Data = int64Res.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(int64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = int64Res.IsSuccess;
+                        rData.DataType = model.DatasType;
+                        break;
+                    case DataType.UInt64:
+                        var uint64Res = await pack.ReadUInt64Async(model.Address, model.ReadLength);
+                        if (uint64Res.IsSuccess)
+                        {
+                            rData.Data = uint64Res.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(uint64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = uint64Res.IsSuccess;
+                        rData.DataType = model.DatasType;
+                        break;
+                    case DataType.Float:
+                        var floatRes = await pack.ReadFloatAsync(model.Address, model.ReadLength);
+                        if (floatRes.IsSuccess)
+                        {
+                            rData.Data = floatRes.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(floatRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = floatRes.IsSuccess;
+                        rData.DataType = model.DatasType;
+                        break;
+                    case DataType.Double:
+                        var doubleRes = await pack.ReadDoubleAsync(model.Address, model.ReadLength);
+                        if (doubleRes.IsSuccess)
+                        {
+                            rData.Data = doubleRes.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(doubleRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = doubleRes.IsSuccess;
+                        rData.DataType = model.DatasType;
+                        break;
+                    case DataType.String:
+                        var stringRes = await pack.ReadStringAsync(model.Address, model.ReadLength);
+                        if (stringRes.IsSuccess)
+                        {
+                            rData.Data = stringRes.Content.Select(x => (object)x).ToArray();
+                        }
+                        rData.Message = ChineseConverter.Convert(stringRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = stringRes.IsSuccess;
+                        rData.DataType = model.DatasType;
+                        break;
+                    default:
+                        // 適當的錯誤處理
                         break;
                 }
+
             }
             else
             {
@@ -492,6 +580,92 @@ namespace ConsolePluginTest
             }
             return rData;
 
+        }
+        public async Task<QJDataArray> SetData(WriteDataModel model)
+        {
+            QJDataArray rData = new QJDataArray();
+            rData.IsOk = false;
+            //判定設備有在列表內
+            if (NetDeviceList.TryGetValue(model.DeviceName, out NetworkDeviceBase pack))
+            {
+                //解析指令包
+                switch (model.DatasType)
+                {
+                    case DataType.Bool:
+                        bool[] boolArray = model.Datas.Select(Convert.ToBoolean).ToArray();
+                        var bool16Res = await pack.WriteAsync(model.Address, boolArray);
+                        rData.Message = ChineseConverter.Convert(bool16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = bool16Res.IsSuccess;
+                        break;
+                    case DataType.Int16:
+                        short[] shortArray = model.Datas.Select(Convert.ToInt16).ToArray();
+                        var int16Res = await pack.WriteAsync(model.Address, shortArray);
+                        rData.Message = ChineseConverter.Convert(int16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = int16Res.IsSuccess;
+                        break;
+                    case DataType.UInt16:
+                        ushort[] ushortArray = model.Datas.Select(Convert.ToUInt16).ToArray();
+                        var uint16Res = await pack.WriteAsync(model.Address, ushortArray);
+                        rData.Message = ChineseConverter.Convert(uint16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = uint16Res.IsSuccess;
+                        break;
+                    case DataType.Int32:
+                        int[] intArray = model.Datas.Select(Convert.ToInt32).ToArray();
+                        var int32Res = await pack.WriteAsync(model.Address, intArray);
+                        rData.Message = ChineseConverter.Convert(int32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = int32Res.IsSuccess;
+                        break;
+                    case DataType.UInt32:
+                        uint[] uintArray = model.Datas.Select(Convert.ToUInt32).ToArray();
+                        var uint32Res = await pack.WriteAsync(model.Address, uintArray);
+                        rData.Message = ChineseConverter.Convert(uint32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = uint32Res.IsSuccess;
+                        break;
+                    case DataType.Int64:
+                        long[] longArray = model.Datas.Select(Convert.ToInt64).ToArray();
+                        var int64Res = await pack.WriteAsync(model.Address, longArray);
+                        rData.Message = ChineseConverter.Convert(int64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = int64Res.IsSuccess;
+                        break;
+                    case DataType.UInt64:
+                        ulong[] ulongArray = model.Datas.Select(Convert.ToUInt64).ToArray();
+                        var uint64Res = await pack.WriteAsync(model.Address, ulongArray);
+                        rData.Message = ChineseConverter.Convert(uint64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = uint64Res.IsSuccess;
+                        break;
+                    case DataType.Float:
+                        float[] floatArray = model.Datas.Select(Convert.ToSingle).ToArray();
+                        var floatRes = await pack.WriteAsync(model.Address, floatArray);
+                        rData.Message = ChineseConverter.Convert(floatRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = floatRes.IsSuccess;
+                        break;
+                    case DataType.Double:
+                        double[] doubleArray = model.Datas.Select(Convert.ToDouble).ToArray();
+                        var doubleRes = await pack.WriteAsync(model.Address, doubleArray);
+                        rData.Message = ChineseConverter.Convert(doubleRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                        rData.IsOk = doubleRes.IsSuccess;
+                        break;
+                    case DataType.String:
+                        string[] stringArray = model.Datas.Select(x => x.ToString()).ToArray();
+                        if (stringArray.Length == 1)
+                        {
+                            var stringRes = await pack.WriteAsync(model.Address, stringArray[0]);
+                            rData.Message = ChineseConverter.Convert(stringRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = stringRes.IsSuccess;
+                        }                        
+                        break;
+                    default:
+                        // 適當的錯誤處理
+                        break;
+                }
+
+            }
+            else
+            {
+                rData.IsOk = false;
+                rData.Message = "找不到指定的設備";
+            }
+            return rData;
         }
 
         public static (bool result, NetworkDeviceBase plcBase) DecodeEthernetDeviceProtocol(CommunicationProtocol cProtocol)
@@ -537,7 +711,7 @@ namespace ConsolePluginTest
                         SpinWait.SpinUntil(() => false, 100);
                     }
                     // 當非同步連接完成或經過 100 毫秒時結束循環
-                    while (!asyncResult.IsCompleted && DateTime.Now.Subtract(now).Milliseconds < 100);
+                    while (!asyncResult.IsCompleted && DateTime.Now.Subtract(now).Milliseconds < 300);
 
                     if (asyncResult.IsCompleted)
                     {

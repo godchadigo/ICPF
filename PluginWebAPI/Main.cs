@@ -50,6 +50,10 @@ namespace PluginWebAPI
                         try
                         {
                             var writeModel = Newtonsoft.Json.JsonConvert.DeserializeObject<WriteDataModel>(mes);
+                            var value = Core.SetData(writeModel).Result;
+                            var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(value);
+                            client.Send(jsonStr);
+                            client.Logger.Info(jsonStr);
                             //client.Logger.Info($"地址:{writeModel.Address}");
                         }
                         catch (Exception ex) 

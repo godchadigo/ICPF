@@ -22,6 +22,9 @@ namespace PFC
         private bool isConnected = false;
         private bool ReceviceFlag = false;
         private QJDataArray ReceviceBuffer;
+        private string mes;
+        private IWaitingClient<TcpClient> waitClient;
+
         private async void ConnectWithRetry()
         {
             
@@ -43,7 +46,8 @@ namespace PFC
 
                 tcpClient.Received += (client, byteBlock, requestInfo) =>
                 {
-                    string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
+                    
+                    mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
                     Debug.WriteLine($"接收到信息：{mes}");
                     try
                     {
@@ -56,9 +60,10 @@ namespace PFC
                     }
                     ReceviceFlag = false;
                 };
+                
 
                 TouchSocketConfig config = new TouchSocketConfig();
-                config.SetRemoteIPHost(new IPHost("203.204.233.66:5000"))
+                config.SetRemoteIPHost(new IPHost("127.0.0.1:5000"))
                     .UsePlugin()
                     .ConfigurePlugins(a =>
                     {
@@ -77,7 +82,11 @@ namespace PFC
 
                         // 檢查是否連線成功
                         if (isConnected)
+                        {
+                        
                             break;
+                        }
+                            
                     }
                     catch (Exception ex)
                     {
@@ -130,11 +139,49 @@ namespace PFC
                 if (isConnected)
                 {
                     var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model , Newtonsoft.Json.Formatting.Indented);
-                    tcpClient.Send(jsonStr);
                     
-                    while (!ReceviceFlag)
+                    //调用GetWaitingClient获取到IWaitingClient的对象。
+                    waitClient = tcpClient.GetWaitingClient(new WaitingOptions()
                     {
-                        return new OperationModel() { IsOk = true, Message = "通訊成功 : " + ReceviceBuffer };
+                        AdapterFilter = AdapterFilter.AllAdapter,//表示发送和接收的数据都会经过适配器
+                        BreakTrigger = true,//表示当连接断开时，会立即触发
+                        ThrowBreakException = true//表示当连接断开时，是否触发异常
+                    });
+                    //然后使用SendThenReturn。
+                    var packStr = Encoding.UTF8.GetBytes(jsonStr);
+                    byte[] returnData = waitClient.SendThenReturn(packStr);
+                    //tcpClient.Logger.Info($"收到回应消息：{Encoding.UTF8.GetString(returnData)}");                    
+                    var data = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(Encoding.UTF8.GetString(returnData));
+                    return new OperationModel() { IsOk = true, Message = "通訊成功 : " , Data = data };
+                    
+                    //return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
+                }
+                else
+                {
+                    return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new OperationModel() { IsOk = false, Message = ex.Message };
+            }
+        }
+       
+
+
+        public OperationModel SetData(WriteDataModel model)
+        {
+            try
+            {
+                if (isConnected)
+                {
+                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model, Newtonsoft.Json.Formatting.Indented);
+                    tcpClient.Send(jsonStr);
+
+                    return new OperationModel() { IsOk = true, Message = "通訊成功 : " + tcpClient.Received };
+                    while (!ReceviceFlag || false)
+                    {
+                        
                     }
                     return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
                 }
@@ -148,7 +195,6 @@ namespace PFC
                 return new OperationModel() { IsOk = false, Message = ex.Message };
             }
         }
-
     }
 
     #region QJProtocol
@@ -261,11 +307,19 @@ namespace PFC
         public override string ToString()
         {
             string strRes = string.Empty;
-            if (IsOk)
-                foreach (var str in Data) 
-                {
-                    strRes += str + " ";
-                }
+            if (Data != null)
+            {
+                if (IsOk && Data.Length > 0)
+                    foreach (var str in Data)
+                    {
+                        strRes += str + " ";
+                    }
+            }
+            else
+            {
+                strRes = "";
+            }
+            
             return (strRes);
         }
     }
