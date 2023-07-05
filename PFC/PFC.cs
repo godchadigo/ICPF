@@ -27,10 +27,7 @@ namespace PFC
         public event EventHandler<string> CommunicationStatusEvent;
         
         private async void ConnectWithRetry()
-        {
-            
-
-
+        {            
             try
             {
                 
