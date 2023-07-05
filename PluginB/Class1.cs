@@ -1,9 +1,8 @@
-﻿using ConsolePluginTest;
+﻿using ICPFCore;
 using Nancy;
 using Newtonsoft;
 using Newtonsoft.Json.Linq;
 using Plugin.B;
-using PluginFramework;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;

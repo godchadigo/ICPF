@@ -1,10 +1,9 @@
-﻿using ConsolePluginTest;
-using PluginFramework;
+﻿using ICPFCore;
 
 namespace PluginA
 {
 
-    public class PluginA : IPlugin
+    public class PluginA : PluginBase
     {
         private Program Core;
         public string PluginName { get; } = "PluginA";

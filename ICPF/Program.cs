@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Xml.Linq;
 
-namespace ConsolePluginTest
+namespace ICPFCore
 {
     public class PluginBase : IPlugin
     {

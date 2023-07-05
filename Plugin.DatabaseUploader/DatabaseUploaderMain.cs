@@ -1,7 +1,6 @@
-﻿using ConsolePluginTest;
-using Dapper;
+﻿using Dapper;
 using DapperExtensions;
-using PluginFramework;
+using ICPFCore;
 using System.Data.SqlClient;
 
 namespace Plugin.DatabaseUploader

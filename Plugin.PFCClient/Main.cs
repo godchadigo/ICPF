@@ -1,15 +1,15 @@
-﻿using ConsolePluginTest;
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using TouchSocket.Core;
 using TouchSocket.Http;
 using TouchSocket.Rpc;
 using TouchSocket.Rpc.WebApi;
 using TouchSocket.Sockets;
+using ICPFCore;
 
 namespace PluginPFCClient
 {
-    public class Main : ConsolePluginTest.PluginBase
+    public class Main : ICPFCore.PluginBase
     {
         public override string PluginName { get; set; } = "PFC_Plugin";
         //public override string PluginName { get; } = "PFC_Plugin";
