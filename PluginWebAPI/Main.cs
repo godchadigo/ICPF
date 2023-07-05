@@ -75,7 +75,7 @@ namespace PluginPFCClient
                     //client.Send(mes);//将收到的信息直接返回给发送方
 
                     //client.Send("id",mes);//将收到的信息返回给特定ID的客户端
-
+                    /*
                     var ids = service.GetIDs();
                     foreach (var clientId in ids)//将收到的信息返回给在线的所有客户端。
                     {
@@ -84,8 +84,9 @@ namespace PluginPFCClient
                             //service.Send(clientId, mes);
                         }
                     }
+                    */
                 };
-                Console.WriteLine("------------");
+                //Console.WriteLine("------------");
                 service.Setup(new TouchSocketConfig()//载入配置     
                     .SetListenIPHosts(new IPHost[] { new IPHost(5000) })//同时监听两个地址
                     .ConfigureContainer(a =>//容器的配置顺序应该在最前面
