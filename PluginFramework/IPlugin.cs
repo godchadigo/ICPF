@@ -8,6 +8,7 @@ namespace PluginFramework
 {
     public interface IPlugin
     {
+        string PluginName { get; }
         void onLoading() { }
         void onCloseing() { }
         void onDeviceConnect(string deviceName) { }

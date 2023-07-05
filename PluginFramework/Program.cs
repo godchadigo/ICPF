@@ -155,7 +155,7 @@ namespace ConsolePluginTest
         private static Program p;
         private static List<IPlugin> plugins = new List<IPlugin>();
         public static string Test { get; set; } = "test123456";
-        private static List<AssemblyLoadContext> context { get; set; } = new List<AssemblyLoadContext>();
+        private static List<LoadDll>  AsmList = new List<LoadDll>();
 
         public static Program GetInstance() 
         {
@@ -185,20 +185,23 @@ namespace ConsolePluginTest
             
             #region 插件反射載入
             
-            LoadPlugins();
-           
+            //LoadPlugins();
 
-            foreach (var pl in context)
+            List<string> pluginpath = p.FindPlugin();
+            //pluginpath = p.DeleteInvalidPlungin(pluginpath);                        
+            foreach (string filename in pluginpath)
             {
-                pl.Unload();
+                AsmList.Add(LoadDLL(filename));
             }
+            
             #endregion
 
             //通知插件啟動
-            foreach (var plugin in plugins)
+            foreach (var plugin in AsmList)
             {
-                plugin.SetInstance(p);
-                plugin.onLoading();
+                plugin.StartTask();
+                plugin._task.SetInstance(p);
+                //plugin._task.onLoading();
             }
 
             //啟動事件偵聽任務
@@ -213,82 +216,115 @@ namespace ConsolePluginTest
 
                 if (input.Equals("stop", StringComparison.OrdinalIgnoreCase))
                 {
+
+                    //通知插件關閉
+                    foreach (var plugin in AsmList)
+                    {
+                        plugin.StopTask();                        
+                    }
+
+                    //關閉PLC連線線程
+                    foreach (var device in NetDeviceList)
+                    {
+                        device.Value.ConnectClose();
+                    }
+                    NetDeviceList = null;
                     Console.WriteLine("隨意按下任何按鍵即可退出...");
                     Console.ReadKey();
                     break; // 停止程序
-                }                                                
-            }            
-
-            //通知插件關閉
-            foreach (var plugin in plugins)
-            {
-                plugin.onCloseing();
-            }
-
-            //關閉PLC連線線程
-            foreach (var device in NetDeviceList)
-            {
-                device.Value.ConnectClose();
-            }
-            
-
-        }        
-        private static void LoadPlugins()
+                }
+                if (input.Equals("reload", StringComparison.OrdinalIgnoreCase))
+                {
+                    ReloadPlugin();                   
+                }
+                if (input.Equals("unload", StringComparison.OrdinalIgnoreCase))
+                {
+                    UnloadPlugin();
+                }
+                if (input.Equals("load", StringComparison.OrdinalIgnoreCase))
+                {
+                    LoadPlugin();
+                }
+                if (input.Equals("plugins", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    WriteLine(GetPlugins());
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.BackgroundColor = ConsoleColor.Black;
+                }
+            }                        
+        }
+        public static string GetPlugins()
         {
-            List<string> pluginpath = p.FindPlugin();
-            pluginpath = p.DeleteInvalidPlungin(pluginpath);
-
-            foreach (string filename in pluginpath)
+            string str = string.Empty;
+            foreach (var plugin in AsmList)
             {
-                try
-                {
-                    //获取文件名
-                    string asmfile = filename;
-                    string asmname = Path.GetFileNameWithoutExtension(asmfile);
-                    if (asmname != string.Empty)
-                    {// 创建自定义的程序集加载上下文
-                        var contextModel = new AssemblyLoadContext(Guid.NewGuid().ToString("N"), true);
-                        
-                        context.Add(contextModel);
-
-                        // 加载插件的 DLL 文件到加载上下文
-                        Assembly pluginAssembly = contextModel.LoadFromAssemblyPath(asmfile);
-                                                
-                        // 在加载上下文中实例化插件类并使用
-                        Type[] types = pluginAssembly.GetExportedTypes();
-                        foreach (Type type in types)
-                        {
-                            if (typeof(IPlugin).IsAssignableFrom(type))
-                            {
-                                IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
-                                plugins.Add(plugin);
-                            }
-                        }
-                        
-                        //context.Unload();
-                        /*
-                        Type[] t = asm.GetExportedTypes();
-                        foreach (Type type in t)
-                        {
-                            if (type.GetInterface("IPlugin") != null)
-                            {
-                                IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
-
-                                plugins.Add(plugin);                                
-                            }
-                        }
-                        */
-                        //DLL一但被加載除非主程式關閉，否則無法刪除或修改
-                        // 卸载加载上下文以释放程序集资源
-                        //context.Unload();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.Write(ex.Message);
-                }
+                str += plugin._task.PluginName + ",";
+            }
+            return str;
+        }
+        public static void StartPlugin()
+        {
+            foreach (var plugin in AsmList)
+            {
+                plugin.StartTask(); //啟動插件任務
             }
         }
+        public static void StopPlugin()
+        {
+            foreach (var plugin in AsmList)
+            {
+                plugin.StopTask();
+            }
+        }
+        public static void LoadPlugin()
+        {
+            List<string> pluginpath = p.FindPlugin();
+            foreach (string filename in pluginpath)
+            {
+                var asmPlugin = LoadDLL(filename);
+                asmPlugin._task.SetInstance(p);
+                AsmList.Add(asmPlugin);
+                Console.WriteLine(asmPlugin._task.PluginName + "重啟中...");
+            }
+            Console.WriteLine("載入了" + AsmList.Count + "份插件。");
+            StartPlugin();
+        }
+        public static void UnloadPlugin()
+        {
+            Console.WriteLine("卸載插件中...，當前插件數量" + AsmList.Count + "份。");
+            StopPlugin();
+            AsmList.Clear();
+            AsmList = new List<LoadDll>();            
+        }
+        public static void ReloadPlugin()
+        {
+            UnloadPlugin();            
+            LoadPlugin();
+            WriteLine("################### Reloading Start... ###################");
+            foreach (var asm in AsmList)
+            {
+                WriteLine(asm._task.PluginName);
+            }
+            WriteLine("成功載入了" + AsmList.Count + "份插件。");
+            WriteLine("#################### Reloading End... ####################");
+            
+        }
+        public static void WriteLine(string msg)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.BackgroundColor = ConsoleColor.Black;
+            Console.WriteLine(msg);
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.BackgroundColor = ConsoleColor.Black;
+        }
+        public static LoadDll LoadDLL(string filePath)
+        {
+            var load = new LoadDll();
+            load.LoadFile(filePath);
+            return load;
+        }        
 
         //查找所有插件的路径
         private List<string> FindPlugin()
@@ -374,11 +410,7 @@ namespace ConsolePluginTest
             }
             return rightPluginPath;
         }
-
-        private void OnProgramCreated()
-        {
-            ProgramCreated?.Invoke(this, EventArgs.Empty);
-        }
+        
         private static void CommunicationTask()
         {
 

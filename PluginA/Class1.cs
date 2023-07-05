@@ -7,7 +7,7 @@ namespace PluginA
     public class PluginA : IPlugin
     {
         private Program Core;
-        private string PluginName = "PluginA";
+        public string PluginName { get; } = "PluginA";
         private CancellationTokenSource cts = new CancellationTokenSource();
 
 
@@ -16,6 +16,13 @@ namespace PluginA
             Console.WriteLine(PluginName + " Loading...");
             // 获取 CancellationToken
             CancellationToken token = cts.Token;
+            Task.Run(async () => {
+                while (!token.IsCancellationRequested)
+                {
+                    Console.WriteLine(DateTime.Now.ToString());
+                    await Task.Delay(1000);
+                }
+            });
             /*
             Task.Run(async () => {
                 while (!token.IsCancellationRequested || false)

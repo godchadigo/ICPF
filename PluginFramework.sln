@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginB", "PluginB\PluginB.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebApplication2", "WebApplication2\WebApplication2.csproj", "{06718359-71D9-4E16-A11D-9C60293EA66B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginWebAPI", "PluginWebAPI\PluginWebAPI.csproj", "{B607AFDA-C01C-43C9-A3A5-132C2FC7E674}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginPFCClient", "PluginWebAPI\PluginPFCClient.csproj", "{B607AFDA-C01C-43C9-A3A5-132C2FC7E674}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TouchsocketTEST", "TouchsocketTEST\TouchsocketTEST.csproj", "{3B2385C0-170F-4350-8DE3-F3C6A878D726}"
 EndProject
@@ -31,9 +31,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TouchSocket", "TouchSocket"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OpcService", "OpcService", "{1D3FAA9E-1977-42C5-AAA1-3F6124C7BF8F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpcuaServer", "OpcuaServer\OpcuaServer.csproj", "{CE664E4F-8933-422C-BF70-1F8D11BA9DE1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpcuaServer", "OpcuaServer\OpcuaServer.csproj", "{CE664E4F-8933-422C-BF70-1F8D11BA9DE1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpcuaClient", "OpcuaClient\OpcuaClient.csproj", "{3BDB2CF6-C855-4D09-81D9-9AD2DBE4A376}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpcuaClient", "OpcuaClient\OpcuaClient.csproj", "{3BDB2CF6-C855-4D09-81D9-9AD2DBE4A376}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

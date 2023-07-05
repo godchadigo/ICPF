@@ -55,7 +55,7 @@ namespace WinFormPluginFrameworkTest
                         Debug.WriteLine(result.Message);
                     }));
                     */
-                    var mcResult = pfc.GetData(mbus);
+                    var mcResult = pfc.GetData(test);
                     this.BeginInvoke(new Action(() =>
                     {
                         if (mcResult.IsOk)
@@ -64,7 +64,7 @@ namespace WinFormPluginFrameworkTest
                             Debug.WriteLine(mcResult.Message);
                         }
                     }));
-                    await Task.Delay(1);
+                    await Task.Delay(1000);
                 }
             });
         }

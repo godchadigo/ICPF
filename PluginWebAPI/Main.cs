@@ -7,16 +7,21 @@ using TouchSocket.Rpc;
 using TouchSocket.Rpc.WebApi;
 using TouchSocket.Sockets;
 
-namespace PluginWebAPI
+namespace PluginPFCClient
 {
     public class Main : PluginFramework.IPlugin
     {
+        public string PluginName { get; } = "PFC_Plugin";
         private Program Core;
+        private TcpService service = new TcpService();
+        private CancellationTokenSource cts = new CancellationTokenSource();
+        Thread t1;
         public void onLoading()
         {
-            Task.Run(() =>
+            Console.WriteLine(PluginName + "插件啟動中...");
+            t1 = new Thread(() =>
             {
-                TcpService service = new TcpService();
+                
                 service.Connecting = (client, e) => { };//有客户端正在连接
                 service.Connected = (client, e) => { };//有客户端成功连接
                 service.Disconnected = (client, e) => { };//有客户端断开连接
@@ -25,10 +30,13 @@ namespace PluginWebAPI
                     //从客户端收到信息
                     string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
 
-
-                    client.Logger.Info("###################Start#################\r\n");
-                    client.Logger.Info(mes + "\r\n");
-                    client.Logger.Info("####################End##################\r\n");
+                    if (false)
+                    {
+                        client.Logger.Info("###################Start#################\r\n");
+                        client.Logger.Info(mes + "\r\n");
+                        client.Logger.Info("####################End##################\r\n");
+                    }
+                    
                     //Console.WriteLine(mes);
                     var packRes = Newtonsoft.Json.JsonConvert.DeserializeObject<BaseDataModel>(mes);
                     
@@ -41,7 +49,7 @@ namespace PluginWebAPI
                             var value = Core.GetData(readModel).Result;
                             var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(value);
                             client.Send(jsonStr);
-                            client.Logger.Info(jsonStr);
+                            //client.Logger.Info(jsonStr);
                         }
                         catch (Exception ex) { }
                     }
@@ -53,7 +61,7 @@ namespace PluginWebAPI
                             var value = Core.SetData(writeModel).Result;
                             var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(value);
                             client.Send(jsonStr);
-                            client.Logger.Info(jsonStr);
+                            //client.Logger.Info(jsonStr);
                             //client.Logger.Info($"地址:{writeModel.Address}");
                         }
                         catch (Exception ex) 
@@ -77,7 +85,7 @@ namespace PluginWebAPI
                         }
                     }
                 };
-
+                Console.WriteLine("------------");
                 service.Setup(new TouchSocketConfig()//载入配置     
                     .SetListenIPHosts(new IPHost[] { new IPHost(5000) })//同时监听两个地址
                     .ConfigureContainer(a =>//容器的配置顺序应该在最前面
@@ -89,9 +97,20 @@ namespace PluginWebAPI
                         //a.Add();//此处可以添加插件
                     })
                     .SetDataHandlingAdapter(() => { return new TerminatorPackageAdapter("\r\n"); }))//配置终止字符适配器，以\r\n结尾。                                    
-                    .Start();//启动
+                    .Start();//启动                
                 //Console.ReadKey();
             });
+            t1.IsBackground = true;
+            t1.Start();
+        }
+        public void onCloseing()
+        {
+            service.Stop();
+            service.Dispose();
+            service = null;            
+            t1.Interrupt();
+            t1 = null;
+            Console.WriteLine(PluginName + "卸載中");
         }
         public void SetInstance(object dd)
         {
