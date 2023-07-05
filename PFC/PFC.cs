@@ -24,24 +24,34 @@ namespace PFC
         private QJDataArray ReceviceBuffer;
         private string mes;
         private IWaitingClient<TcpClient> waitClient;
-
+        public event EventHandler<string> CommunicationStatusEvent;
+        
         private async void ConnectWithRetry()
         {
             
-            int maxRetryCount = -1;
-            int retryDelay = 100; // 1 秒
+
 
             try
             {
+                
+                tcpClient.Connecting += (client, e) =>
+                {
+                    //Debug.WriteLine("recon?");
+                    //isConnected = true;
+                };
                 tcpClient.Connected += (client, e) =>
                 {
                     Debug.WriteLine("上線");
+                    CommunicationStatusEvent?.Invoke(this, "上線");
                     isConnected = true;
                 };
 
                 tcpClient.Disconnected += (client, e) =>
                 {
                     Debug.WriteLine("斷線");
+                    CommunicationStatusEvent?.Invoke(this, "斷線");
+                    isConnected = false;
+                    RetryConnect();
                 };
 
                 tcpClient.Received += (client, byteBlock, requestInfo) =>
@@ -73,44 +83,55 @@ namespace PFC
                     ;
 
                 tcpClient.Setup(config);
+                await RetryConnect();
 
-                int retryCount = 0;
 
-                while (!isConnected && retryCount < maxRetryCount || !isConnected && maxRetryCount == -1)
-                {
-                    try
-                    {
-                        await tcpClient.ConnectAsync();
 
-                        // 檢查是否連線成功
-                        if (isConnected)
-                        {
-                        
-                            break;
-                        }
-                            
-                    }
-                    catch (Exception ex)
-                    {
-                        // 處理連線異常
-                    }
 
-                    retryCount++;
-                    Debug.WriteLine("重連" + retryCount);
-                    await Task.Delay(retryDelay);
-                }
-
-                if (!isConnected)
-                {
-                    Console.WriteLine("連線超時");
-                    // 觸發通知事件
-                    // ...
-                    isConnected = false;
-                }
             }
             catch (Exception ex)
             {
                 // 處理異常
+                isConnected = false;
+            }
+        }
+        public async Task RetryConnect()
+        {
+            int retryCount = 0;
+            int maxRetryCount = -1;
+            int retryDelay = 100; // 1 秒
+
+            while (!isConnected && retryCount < maxRetryCount || !isConnected && maxRetryCount == -1)
+            {
+                try
+                {
+                    await tcpClient.ConnectAsync();
+
+                    // 檢查是否連線成功
+                    if (isConnected)
+                    {
+
+                        break;
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    // 處理連線異常
+                }
+
+                retryCount++;
+                CommunicationStatusEvent?.Invoke(this, "重連" + retryCount);
+                Debug.WriteLine("重連" + retryCount);
+                await Task.Delay(retryDelay);
+            }
+
+            if (!isConnected)
+            {
+                CommunicationStatusEvent?.Invoke(this, "重連連線超時");
+                Console.WriteLine("連線超時");
+                // 觸發通知事件
+                // ...
                 isConnected = false;
             }
         }

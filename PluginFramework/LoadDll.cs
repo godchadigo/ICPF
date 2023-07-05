@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ConsolePluginTest;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,9 +55,16 @@ namespace PluginFramework
                     //_AssemblyLoadContext.LoadFromAssemblyPath(@"D:\自動控制\專案研究\C#\PluginFramework\PluginFramework\bin\Debug\net6.0\Dependencies\Dapper.dll");
                     foreach (var item in _Assembly.GetTypes())
                     {
+                        
                         if (item.GetInterface("IPlugin") != null)
                         {
                             _task = (IPlugin)Activator.CreateInstance(item);
+                            break;
+                        }
+                        if (typeof(PluginBase).IsAssignableFrom(item))
+                        {
+                            _task = (PluginBase)Activator.CreateInstance(item);
+                            // 使用 plugin 对象进行操作
                             break;
                         }
                     }

@@ -11,6 +11,32 @@ using System.Xml.Linq;
 
 namespace ConsolePluginTest
 {
+    public class PluginBase : IPlugin
+    {
+        public virtual string PluginName { get; set; } = "Base";
+        public static Program Core { get; set; }
+        public virtual void onLoading()
+        {            
+            Console.WriteLine(PluginName + " Loading...");
+        }
+        public virtual void onCloseing() 
+        {
+            Console.WriteLine(PluginName + " Closeing...");
+        }
+        public void SetInstance(object dd)
+        { 
+            Core = (Program) dd;
+        }
+        public virtual async Task<QJDataArray> GetData(ReadDataModel model) 
+        {
+            return await Core.GetData(model);
+        }
+        public virtual async Task<QJDataArray> SetData(WriteDataModel model) 
+        {
+            return await Core.SetData(model);
+        }
+        public void Test() { }
+    }
 
     public enum IRWDataOperation
     {

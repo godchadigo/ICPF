@@ -6,13 +6,12 @@ using System.Data.SqlClient;
 
 namespace Plugin.DatabaseUploader
 {
-    public class DatabaseUploaderMain : IPlugin
+    public class DatabaseUploaderMain : PluginBase
     {
-        public string PluginName => "DatabaseUploader";
-
-        public Program Core { get; private set; }
-        public void onLoading() 
+        public override string PluginName => "DatabaseUploader";        
+        public override void onLoading() 
         {
+            base.onLoading();
             string server = "127.0.0.1";
             string user = "sa";
             string password = "Asd279604823";
@@ -43,13 +42,10 @@ namespace Plugin.DatabaseUploader
                 catch (Exception ex) { }                
             }
         }
-        public void onCloseing() 
+        public override void onCloseing() 
         {
-        }
-        public void SetInstance(object dd)
-        {
-            Core = (Program)dd;
-        }
+            base.onCloseing();
+        }        
     }
     #region SQL Entity    
     public class PluginUploader

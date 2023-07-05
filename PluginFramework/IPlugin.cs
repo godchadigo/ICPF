@@ -13,8 +13,7 @@ namespace PluginFramework
         void onCloseing() { }
         void onDeviceConnect(string deviceName) { }
         void onDeviceDisconnect(string deviceName) { }
-        void SetInstance(object dd) { }
-        void TestA(int a, int b) { }
+        void SetInstance(object dd) { }        
         /// <summary>
         /// 讀取數據(讀取失敗等待)
         /// </summary>

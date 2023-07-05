@@ -9,19 +9,21 @@ using TouchSocket.Sockets;
 
 namespace PluginPFCClient
 {
-    public class Main : PluginFramework.IPlugin
+    public class Main : ConsolePluginTest.PluginBase
     {
-        public string PluginName { get; } = "PFC_Plugin";
-        private Program Core;
+        public override string PluginName { get; set; } = "PFC_Plugin";
+        //public override string PluginName { get; } = "PFC_Plugin";
+        //private Program Core;
         private TcpService service = new TcpService();
         private CancellationTokenSource cts = new CancellationTokenSource();
         Thread t1;
-        public void onLoading()
+        public override void onLoading()
         {
-            Console.WriteLine(PluginName + "插件啟動中...");
+            base.onLoading();
+
+            //Console.WriteLine(PluginName + "-------------插件啟動中...");
             t1 = new Thread(() =>
-            {
-                
+            {                
                 service.Connecting = (client, e) => { };//有客户端正在连接
                 service.Connected = (client, e) => { };//有客户端成功连接
                 service.Disconnected = (client, e) => { };//有客户端断开连接
@@ -46,7 +48,7 @@ namespace PluginPFCClient
                         {
                             var readModel = Newtonsoft.Json.JsonConvert.DeserializeObject<ReadDataModel>(mes);
                             //client.Logger.Info($"地址:{readModel.Address}");
-                            var value = Core.GetData(readModel).Result;
+                            var value = GetData(readModel).Result;
                             var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(value);
                             client.Send(jsonStr);
                             //client.Logger.Info(jsonStr);
@@ -58,7 +60,7 @@ namespace PluginPFCClient
                         try
                         {
                             var writeModel = Newtonsoft.Json.JsonConvert.DeserializeObject<WriteDataModel>(mes);
-                            var value = Core.SetData(writeModel).Result;
+                            var value = SetData(writeModel).Result;
                             var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(value);
                             client.Send(jsonStr);
                             //client.Logger.Info(jsonStr);
@@ -104,18 +106,14 @@ namespace PluginPFCClient
             t1.IsBackground = true;
             t1.Start();
         }
-        public void onCloseing()
-        {
+        public override void onCloseing()
+        {            
             service.Stop();
             service.Dispose();
             service = null;            
             t1.Interrupt();
             t1 = null;
-            Console.WriteLine(PluginName + "卸載中");
-        }
-        public void SetInstance(object dd)
-        {
-            Core = (Program)dd;
-        }
+            base.onCloseing();
+        }        
     }
 }

@@ -2,39 +2,25 @@
 using Nancy;
 using Newtonsoft;
 using Newtonsoft.Json.Linq;
+using Plugin.B;
 using PluginFramework;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace PluginB
 {
-    public class PluginB : IPlugin
+    public class PluginB : PluginBase 
     {
-        private Program Core;
-        public string PluginName { get; } = "PluginB";
-        private CancellationTokenSource cts = new CancellationTokenSource();
+        public override string PluginName { get; set; } = "PluginB";
+        private CancellationTokenSource cts = new CancellationTokenSource();        
 
 
-        public void onLoading()
-        {
-            Console.WriteLine(PluginName + " Loading...");
-            // 获取 CancellationToken
-            CancellationToken token = cts.Token;
-            Task.Run(async () => {
-                while (!token.IsCancellationRequested)
-                {
-                    
-                    await Task.Delay(1000);
-                }
-            }, token);
-
-        }
-
-        public void onCloseing()
-        {
+        public override void onCloseing()
+        {            
             cts.Cancel();
-            Console.WriteLine(PluginName + " Closeing...");
+            base.onCloseing();
         }
 
         public void SetInstance(object dd)

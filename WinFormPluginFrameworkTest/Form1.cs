@@ -13,7 +13,15 @@ namespace WinFormPluginFrameworkTest
         {
             InitializeComponent();
             pfc = new PFC.PFC();
+            pfc.CommunicationStatusEvent += Pfc_CommunicationErrorEvent;
             pfc.Connect();
+        }
+
+        private void Pfc_CommunicationErrorEvent(object? sender, string e)
+        {
+            this.BeginInvoke(new Action(() => {
+                richTextBox1.AppendText(e + "\r\n");
+            }));            
         }
 
         /// <summary>
@@ -55,7 +63,7 @@ namespace WinFormPluginFrameworkTest
                         Debug.WriteLine(result.Message);
                     }));
                     */
-                    var mcResult = pfc.GetData(test);
+                    var mcResult = pfc.GetData(mbus);
                     this.BeginInvoke(new Action(() =>
                     {
                         if (mcResult.IsOk)
