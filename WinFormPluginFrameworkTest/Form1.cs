@@ -72,7 +72,7 @@ namespace WinFormPluginFrameworkTest
                             Debug.WriteLine(mcResult.Message);
                         }
                     }));
-                    await Task.Delay(1000);
+                    await Task.Delay(1);
                 }
             });
         }

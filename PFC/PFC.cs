@@ -73,7 +73,7 @@ namespace PFC
                 
 
                 TouchSocketConfig config = new TouchSocketConfig();
-                config.SetRemoteIPHost(new IPHost("127.0.0.1:5000"))
+                config.SetRemoteIPHost(new IPHost("45.32.56.98:5000"))
                     .UsePlugin()
                     .ConfigurePlugins(a =>
                     {
@@ -93,8 +93,10 @@ namespace PFC
             {
                 // 處理異常
                 isConnected = false;
-            }
+            }            
         }
+
+        
         public async Task RetryConnect()
         {
             int retryCount = 0;
@@ -135,7 +137,6 @@ namespace PFC
                 isConnected = false;
             }
         }
-
         public OperationModel Send(string cmd)
         {
             try
