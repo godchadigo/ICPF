@@ -35,8 +35,7 @@ namespace Plugin.DatabaseUploader
                         Message = "Hello, Dapper!",
                         Data = "Some data"
                     };
-
-                    var query = "INSERT INTO PluginUploader (Uuid, TagName, Message, Data) VALUES (@Uuid, @TagName, @Message, @Data)";
+              
                     cn.Insert(entity);
                     Console.WriteLine("向資料庫插入了一筆資料");
                     cn.Close();
