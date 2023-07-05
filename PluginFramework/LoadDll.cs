@@ -46,10 +46,12 @@ namespace PluginFramework
                 _AssemblyLoadContext = new AssemblyLoadContext(Guid.NewGuid().ToString("N"), true);
                 _AssemblyLoadContext.Resolving += _AssemblyLoadContext_Resolving;
 
+                
                 using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read))
                 {
                     var _Assembly = _AssemblyLoadContext.LoadFromStream(fs);
                     var Modules = _Assembly.Modules;
+                    //_AssemblyLoadContext.LoadFromAssemblyPath(@"D:\自動控制\專案研究\C#\PluginFramework\PluginFramework\bin\Debug\net6.0\Dependencies\Dapper.dll");
                     foreach (var item in _Assembly.GetTypes())
                     {
                         if (item.GetInterface("IPlugin") != null)
@@ -67,17 +69,12 @@ namespace PluginFramework
 
         private Assembly _AssemblyLoadContext_Resolving(AssemblyLoadContext arg1, AssemblyName arg2)
         {
-            Console.WriteLine($"加载{arg2.Name}");
+            Console.WriteLine($"加載依賴套件 {arg2.Name}");
             var path = resolver.ResolveAssemblyToPath(arg2);
-            if (!string.IsNullOrEmpty(path))
-            {
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-                {
-                    return _AssemblyLoadContext.LoadFromStream(fs);
-                }
-            }
-            return null;
+            string currentDirectory = System.IO.Directory.GetCurrentDirectory();
+            return arg1.LoadFromAssemblyPath(currentDirectory + @"\Dependencies\" + arg2.Name + ".dll");            
         }
+
 
         public bool StartTask()
         {
@@ -102,7 +99,7 @@ namespace PluginFramework
             {
                 _task.onLoading();
             }
-            catch (Exception ex) { Console.WriteLine($"_Run 任务中断执行:{ex.Message}"); };
+            catch (Exception ex) { Console.WriteLine($"_Run 錯誤:{ex.Message}"); };
         }
         public bool StopTask()
         {

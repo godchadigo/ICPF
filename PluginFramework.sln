@@ -7,13 +7,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginFramework", "PluginFr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{709AF6D6-FF0E-481D-93C4-31BD34825674}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginA", "PluginA\PluginA.csproj", "{F08401E3-8CA9-4454-8DE6-8A920DB5921C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plugin.A", "PluginA\Plugin.A.csproj", "{F08401E3-8CA9-4454-8DE6-8A920DB5921C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginB", "PluginB\PluginB.csproj", "{1DC6461E-48AD-4373-8B99-BB15E13AA1DA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plugin.B", "PluginB\Plugin.B.csproj", "{1DC6461E-48AD-4373-8B99-BB15E13AA1DA}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebApplication2", "WebApplication2\WebApplication2.csproj", "{06718359-71D9-4E16-A11D-9C60293EA66B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PluginPFCClient", "PluginWebAPI\PluginPFCClient.csproj", "{B607AFDA-C01C-43C9-A3A5-132C2FC7E674}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Plugin.PFCClient", "PluginWebAPI\Plugin.PFCClient.csproj", "{B607AFDA-C01C-43C9-A3A5-132C2FC7E674}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TouchsocketTEST", "TouchsocketTEST\TouchsocketTEST.csproj", "{3B2385C0-170F-4350-8DE3-F3C6A878D726}"
 EndProject
@@ -34,6 +34,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpcuaServer", "OpcuaServer\OpcuaServer.csproj", "{CE664E4F-8933-422C-BF70-1F8D11BA9DE1}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpcuaClient", "OpcuaClient\OpcuaClient.csproj", "{3BDB2CF6-C855-4D09-81D9-9AD2DBE4A376}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Plugin.DatabaseUploader", "Plugin.DatabaseUploader\Plugin.DatabaseUploader.csproj", "{CCEF0718-95EB-4ABE-AC59-29F550A69825}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DapperInsertTest", "DapperInsertTest\DapperInsertTest.csproj", "{3C595177-1D61-4E22-861C-F9611B5D6463}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -85,6 +89,14 @@ Global
 		{3BDB2CF6-C855-4D09-81D9-9AD2DBE4A376}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3BDB2CF6-C855-4D09-81D9-9AD2DBE4A376}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3BDB2CF6-C855-4D09-81D9-9AD2DBE4A376}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CCEF0718-95EB-4ABE-AC59-29F550A69825}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCEF0718-95EB-4ABE-AC59-29F550A69825}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCEF0718-95EB-4ABE-AC59-29F550A69825}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCEF0718-95EB-4ABE-AC59-29F550A69825}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C595177-1D61-4E22-861C-F9611B5D6463}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C595177-1D61-4E22-861C-F9611B5D6463}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C595177-1D61-4E22-861C-F9611B5D6463}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C595177-1D61-4E22-861C-F9611B5D6463}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -100,6 +112,7 @@ Global
 		{E7229C2D-2A9C-4C7A-8071-17F5EC2424DC} = {8B4D2EBF-6FFD-4AEE-8736-27A78513C007}
 		{CE664E4F-8933-422C-BF70-1F8D11BA9DE1} = {1D3FAA9E-1977-42C5-AAA1-3F6124C7BF8F}
 		{3BDB2CF6-C855-4D09-81D9-9AD2DBE4A376} = {1D3FAA9E-1977-42C5-AAA1-3F6124C7BF8F}
+		{CCEF0718-95EB-4ABE-AC59-29F550A69825} = {709AF6D6-FF0E-481D-93C4-31BD34825674}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5D55D455-5476-492F-9504-873F10E3AE5B}

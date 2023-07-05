@@ -19,7 +19,7 @@ namespace PluginA
             Task.Run(async () => {
                 while (!token.IsCancellationRequested)
                 {
-                    Console.WriteLine(DateTime.Now.ToString());
+                    //Console.WriteLine(DateTime.Now.ToString());
                     await Task.Delay(1000);
                 }
             });

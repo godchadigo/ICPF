@@ -9,7 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PluginFramework\PluginFramework.csproj" />
+    <Reference Include="PluginFramework">
+      <HintPath>..\PluginFramework\bin\Debug\net6.0\PluginFramework.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

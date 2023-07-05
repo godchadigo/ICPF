@@ -12,7 +12,7 @@ namespace PluginB
     public class PluginB : IPlugin
     {
         private Program Core;
-        private string PluginName = "PluginB";
+        public string PluginName { get; } = "PluginB";
         private CancellationTokenSource cts = new CancellationTokenSource();
 
 
