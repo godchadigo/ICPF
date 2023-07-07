@@ -5,7 +5,7 @@ using TouchSocket.Sockets;
 
 namespace PFC
 {
-    public class PFC
+    public class PFC : IPFC
     {
         public PFC()
         {
@@ -13,10 +13,12 @@ namespace PFC
         }
         private static TcpClient tcpClient = new TcpClient();
         public void Connect()
+        {           
+            ConnectWithRetry();
+        }
+        public void Connect(string ip_port)
         {
-            Task.Run(() => {
-                
-            });
+            IpAddressPort = ip_port;
             ConnectWithRetry();
         }
         private bool isConnected = false;
@@ -25,7 +27,9 @@ namespace PFC
         private string mes;
         private IWaitingClient<TcpClient> waitClient;
         public event EventHandler<string> CommunicationStatusEvent;
-        
+        private string IpAddressPort { get; set; } = "45.32.56.98:5000";
+
+
         private async void ConnectWithRetry()
         {            
             try
@@ -70,7 +74,7 @@ namespace PFC
                 
 
                 TouchSocketConfig config = new TouchSocketConfig();
-                config.SetRemoteIPHost(new IPHost("45.32.56.98:5000"))
+                config.SetRemoteIPHost(new IPHost(IpAddressPort))
                     .UsePlugin()
                     .ConfigurePlugins(a =>
                     {
@@ -173,7 +177,7 @@ namespace PFC
                     byte[] returnData = waitClient.SendThenReturn(packStr);
                     //tcpClient.Logger.Info($"收到回应消息：{Encoding.UTF8.GetString(returnData)}");                    
                     var data = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(Encoding.UTF8.GetString(returnData));
-                    return new OperationModel() { IsOk = true, DeviceName = data.DeviceName, Message = data.Message , Data = data };
+                    return new OperationModel() { IsOk = data.IsOk, DeviceName = data.DeviceName, Message = data.Message , Data = data };
                     
                     //return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
                 }
