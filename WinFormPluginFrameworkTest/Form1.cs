@@ -14,7 +14,7 @@ namespace WinFormPluginFrameworkTest
             InitializeComponent();
             pfc = new PFC.PFC();
             pfc.CommunicationStatusEvent += Pfc_CommunicationErrorEvent;
-            pfc.Connect();
+            pfc.Connect("127.0.0.1:5000");
         }
 
         private void Pfc_CommunicationErrorEvent(object? sender, string e)
@@ -49,7 +49,7 @@ namespace WinFormPluginFrameworkTest
             {
                 DeviceName = "MBUS_1",
                 Address = "0",
-                ReadLength = 100,
+                ReadLength = 50,
                 DatasType = DataType.Int32,
             };
             Task.Run(async () =>
@@ -72,7 +72,7 @@ namespace WinFormPluginFrameworkTest
                             Debug.WriteLine(mcResult.Message);
                         }
                     }));
-                    await Task.Delay(10);
+                    await Task.Delay(1000);
                 }
             });
         }

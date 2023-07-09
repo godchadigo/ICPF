@@ -4,6 +4,7 @@ using Microsoft.International.Converters.TraditionalChineseToSimplifiedConverter
 using Newtonsoft.Json;
 using PluginFramework;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -183,6 +184,18 @@ namespace ICPFCore
         public static string Test { get; set; } = "test123456";
         private static List<LoadDll>  AsmList = new List<LoadDll>();
 
+        private static Timer timer;
+        private static int elapsedTime;
+        private const int MaxElapsedTime = 60 * 60 * 24; // 授權鎖秒數
+        /// <summary>
+        /// 允許使用幾次測試
+        /// </summary>
+        private const int ForTestCounter = 1;
+        /// <summary>
+        /// 允許使用幾次測試(當前計數)
+        /// </summary>
+        private static int ForTestCount = 0;    
+        private static bool isAuthorized = false;
         public static Program GetInstance() 
         {
             return p;
@@ -205,6 +218,13 @@ namespace ICPFCore
             //***** -測試空間- *****//
             //return;
 
+            //暫時授權
+            ForTest();
+
+            // 初始化计时器
+            timer = new Timer(TimerCallback, null, 0, 1000); // 设置计时器间隔为1秒
+            
+            //本體
             p = new Program();
 
             CommunicationTask();
@@ -219,26 +239,28 @@ namespace ICPFCore
             {
                 AsmList.Add(LoadDLL(filename));
             }
-            
+
             #endregion
 
-            //通知插件啟動
+            #region 通知插件啟動            
             foreach (var plugin in AsmList)
             {
+                //通知插件啟動任務
                 plugin.StartTask();
-                plugin._task.SetInstance(p);
-                //plugin._task.onLoading();
+                //傳入ICPF主體，以便各插件後續可以直接調用主體的方法
+                plugin._task.SetInstance(p);                
             }
 
-            //啟動事件偵聽任務
-            EventTask();
-            
+            #endregion
 
-            //LSManager.Instance.Test();
-            //偵測停止指令 以及核心迴圈
+            #region 啟動設備上下線事件偵聽任務            
+            EventTask();
+            #endregion
+
+            #region 控制台指令偵測器                        
             while (true)
             {                
-                string input = Console.ReadLine();
+                string input = Console.ReadLine();  //當街收到指令時中斷進入下面的˙判斷
 
                 if (input.Equals("stop", StringComparison.OrdinalIgnoreCase))
                 {
@@ -261,7 +283,15 @@ namespace ICPFCore
                 }
                 if (input.Equals("reload", StringComparison.OrdinalIgnoreCase))
                 {
-                    ReloadPlugin();                   
+                    ReloadPlugin();   
+                    foreach(var device in NetDeviceList)
+                    {
+                        if (device.Value != null)
+                        {
+                            device.Value.ConnectClose();                            
+                        }                        
+                    }
+                    CommunicationTask();
                 }
                 if (input.Equals("unload", StringComparison.OrdinalIgnoreCase))
                 {
@@ -279,7 +309,8 @@ namespace ICPFCore
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.BackgroundColor = ConsoleColor.Black;
                 }
-            }                        
+            }
+            #endregion
         }
         public static string GetPlugins()
         {
@@ -306,6 +337,7 @@ namespace ICPFCore
         }
         public static void LoadPlugin()
         {
+            if (!isAuthorized) return;
             List<string> pluginpath = p.FindPlugin();
             foreach (string filename in pluginpath)
             {
@@ -326,6 +358,7 @@ namespace ICPFCore
         }
         public static void ReloadPlugin()
         {
+            if (!isAuthorized) return;
             UnloadPlugin();            
             LoadPlugin();
             WriteLine("################### Reloading Start... ###################");
@@ -373,70 +406,10 @@ namespace ICPFCore
             }
             return pluginpath;
         }
-        //载入插件，在Assembly中查找类型
-        private object LoadObject(Assembly asm, string className, string interfacename
-                        , object[] param)
-        {
-            try
-            {
-                //取得className的类型
-                Type t = asm.GetType(className);
-                if (t == null
-                    || !t.IsClass
-                    || !t.IsPublic
-                    || t.IsAbstract
-                    || t.GetInterface(interfacename) == null
-                   )
-                {
-                    return null;
-                }
-                //创建对象
-                Object o = Activator.CreateInstance(t, param);
-                if (o == null)
-                {
-                    //创建失败，返回null
-                    return null;
-                }
-                return o;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        //移除无效的的插件，返回正确的插件路径列表，Invalid:无效的
-        private List<string> DeleteInvalidPlungin(List<string> PlunginPath)
-        {
-            string interfacename = typeof(IPlugin).FullName;
-            List<string> rightPluginPath = new List<string>();
-            //遍历所有插件。
-            foreach (string filename in PlunginPath)
-            {
-                try
-                {
-                    Assembly asm = Assembly.LoadFile(filename);
-                    //遍历导出插件的类。
-                    foreach (Type t in asm.GetExportedTypes())
-                    {
-                        //查找指定接口
-                        Object plugin = LoadObject(asm, t.FullName, interfacename, null);
-                        //如果找到，将插件路径添加到rightPluginPath列表里，并结束循环。
-                        if (plugin != null)
-                        {
-                            rightPluginPath.Add(filename);
-                            break;
-                        }
-                    }
-                }
-                catch
-                {
-                    //throw new Exception(filename + "不是有效插件");
-                    Console.WriteLine(filename + "不是有效插件");
-                }
-            }
-            return rightPluginPath;
-        }
-        
+                  
+        /// <summary>
+        /// 啟動主通訊任務
+        /// </summary>
         private static void CommunicationTask()
         {
 
@@ -511,7 +484,7 @@ namespace ICPFCore
 
                 while (true) {
                     try{
-                        Test = "Hello world!";
+                        if (NetDeviceList == null) continue;
                         foreach (var device in NetDeviceList)
                         {
                             //Console.WriteLine("現有設備: " + device.Value.IpAddress + NetDeviceList.Count);
@@ -802,6 +775,46 @@ namespace ICPFCore
                     }
             }
             return (true, null);
+        }
+        private static void TimerCallback(object state)
+        {
+            if (elapsedTime >= MaxElapsedTime )
+            {
+                isAuthorized = false;
+                ForTestCount++;
+                timer.Dispose();
+                Debug.WriteLine("24小時測試授權已達，請重新授權。");
+                UnloadPlugin();
+            }
+            elapsedTime++;
+            //Note:一開始先以小時提示，當最後剩下分鐘時10分鐘提示一次，最後一分鐘時數秒。
+            if (((MaxElapsedTime-elapsedTime) % (60*60)) == 0 && ((MaxElapsedTime-elapsedTime) / (60 * 60)) != 0 )
+            {
+                //時
+                Debug.WriteLine("剩餘" + (MaxElapsedTime - elapsedTime) % (60*60) + "小時");
+            }
+            else
+            {
+                if (((MaxElapsedTime-elapsedTime) % (10 * 60)) == 0 && ((MaxElapsedTime - elapsedTime) / (10 * 60)) != 0)
+                {
+                    //10分
+                    Debug.WriteLine("剩餘" + (MaxElapsedTime - elapsedTime) % (10 * 60) * 10 + "分鐘");
+                }
+                else
+                {
+                    if (((MaxElapsedTime - elapsedTime) / (60)) == 0)
+                    {
+                        //秒
+                        Debug.WriteLine("剩餘" + (MaxElapsedTime - elapsedTime) % (60) + "秒鐘");
+                    }
+                }
+            }
+            
+        }
+        private static void ForTest()
+        {
+            if (!isAuthorized && ForTestCount < ForTestCounter)
+                isAuthorized = true;
         }
     }
 

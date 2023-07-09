@@ -30,17 +30,24 @@ builder.Services.AddCors(options =>
 });
 #endregion
 
+// ²K¥[ IHttpContextAccessor ªA°È
+//builder.Services.AddHttpContextAccessor();
+//builder.WebHost.UseUrls("http://0.0.0.0:5000");
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+
 }
+
+//app.UseSwagger();
+//app.UseSwaggerUI();
+
 app.UseCors("Open");
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
