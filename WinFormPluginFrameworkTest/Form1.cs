@@ -19,9 +19,10 @@ namespace WinFormPluginFrameworkTest
 
         private void Pfc_CommunicationErrorEvent(object? sender, string e)
         {
-            this.BeginInvoke(new Action(() => {
+            this.BeginInvoke(new Action(() =>
+            {
                 richTextBox1.AppendText(e + "\r\n");
-            }));            
+            }));
         }
 
         /// <summary>
@@ -76,6 +77,16 @@ namespace WinFormPluginFrameworkTest
                 }
             });
         }
+        /// <summary>
+        /// Tag讀取
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void button4_Click(object sender, EventArgs e)
+        {
+            //直接指定要讀取的Tag點
+            
+        }
         private int count = 9999999;
         /// <summary>
         /// 寫入
@@ -129,5 +140,6 @@ namespace WinFormPluginFrameworkTest
         }
         #endregion
 
+        
     }
 }

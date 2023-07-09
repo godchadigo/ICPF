@@ -32,6 +32,7 @@
             button1 = new Button();
             button2 = new Button();
             button3 = new Button();
+            button4 = new Button();
             SuspendLayout();
             // 
             // richTextBox1
@@ -71,17 +72,29 @@
             button3.Font = new Font("標楷體", 18F, FontStyle.Regular, GraphicsUnit.Point);
             button3.Location = new Point(347, 494);
             button3.Name = "button3";
-            button3.Size = new Size(312, 75);
+            button3.Size = new Size(146, 75);
             button3.TabIndex = 3;
             button3.Text = "寫入";
             button3.UseVisualStyleBackColor = true;
             button3.Click += button3_Click;
+            // 
+            // button4
+            // 
+            button4.Font = new Font("標楷體", 18F, FontStyle.Regular, GraphicsUnit.Point);
+            button4.Location = new Point(513, 494);
+            button4.Name = "button4";
+            button4.Size = new Size(146, 75);
+            button4.TabIndex = 4;
+            button4.Text = "Tag讀取";
+            button4.UseVisualStyleBackColor = true;
+            button4.Click += button4_Click;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1464, 581);
+            Controls.Add(button4);
             Controls.Add(button3);
             Controls.Add(button2);
             Controls.Add(button1);
@@ -97,5 +110,6 @@
         private Button button1;
         private Button button2;
         private Button button3;
+        private Button button4;
     }
 }

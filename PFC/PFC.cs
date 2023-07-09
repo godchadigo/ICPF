@@ -225,7 +225,7 @@ namespace PFC
             {
                 return new OperationModel() { IsOk = false, Message = ex.Message };
             }
-        }
+        }        
     }
 
     #region QJProtocol

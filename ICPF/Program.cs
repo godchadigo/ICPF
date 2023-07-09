@@ -1,4 +1,5 @@
 ﻿using HslCommunication;
+using HslCommunication.Core;
 using HslCommunication.Core.Net;
 using Microsoft.International.Converters.TraditionalChineseToSimplifiedConverter;
 using Newtonsoft.Json;
@@ -122,6 +123,30 @@ namespace ICPFCore
         public DataType DataType { get; set; }
         public string Message { get; set; }
     }
+    public class QJTagDataArray : QJDataArray
+    {
+        public string TagName { get; set; }
+    }
+    /// <summary>
+    /// v1.初始化，支持單一數據讀取
+    /// </summary>
+    /// <remarks>
+    /// <para>  一個Tag需要具備基礎的資料如下:                     </para>
+    /// <para>  1.狀態:用於顯示是否獲取成功                        </para>
+    /// <para>  2.     </para> 
+    /// <para>  3.目標地址:用於告知ICPF要向哪一個地址發出請求      </para> 
+    /// <para>  4.資料類型:用於告知ICPF操作的類型                  </para> 
+    /// <para>  5.訊息: 用於告知發生什麼狀態                       </para>
+    /// <para>  6.TagName:標籤的名稱，用於給方法查詢               </para>
+    /// </remarks>
+    public class Tag
+    {
+        public string TagName { get; set; }
+        public bool IsOk { get; set; } = false;        
+        public string Address { get; set; }
+        public DataType DataType { get; set; }
+        public ushort Length { get; } = 1;
+    }
     public enum CommunicationInterface
     {
         Serial = 1,
@@ -139,7 +164,8 @@ namespace ICPFCore
     {        
         string DeviceName { get; set; }
         CommunicationInterface CommunicationInterface { get; }
-        CommunicationProtocol CommunicationProtocol { get; set; }        
+        CommunicationProtocol CommunicationProtocol { get; set; }
+        List<Tag> TagList { get; set; } 
     }
     /// <summary>
     /// 基類通訊模型
@@ -149,25 +175,27 @@ namespace ICPFCore
         public string DeviceName { get; set; }
         public CommunicationInterface CommunicationInterface { get; set; }
         public CommunicationProtocol CommunicationProtocol { get; set; }
+        public List<Tag> TagList { get; set; } = new List<Tag>();
 
     }
 
     /// <summary>
     /// 網路型通訊模型
     /// </summary>
-    public class EthernetDeviceConfigModel : IDeviceConfig
+    public class EthernetDeviceConfigModel : BaseDeviceConfigModel , IDeviceConfig
     {
         public string DeviceName { get; set; }
         public CommunicationInterface CommunicationInterface { get; } = CommunicationInterface.Ethernet;
         public CommunicationProtocol CommunicationProtocol { get; set; }
         public string IP { get;set; }
         public int Port { get;set; }
+        public List<Tag> TagList { get; set; } = new List<Tag>();
 
     }
     /// <summary>
     /// 串口暫不開發
     /// </summary>
-    public class SerialDeviceConfigModel : IDeviceConfig
+    public class SerialDeviceConfigModel : BaseDeviceConfigModel , IDeviceConfig
     {
         public string DeviceName { get; set; }
         public CommunicationInterface CommunicationInterface { get; set; } = CommunicationInterface.Serial;
@@ -179,6 +207,7 @@ namespace ICPFCore
     {
         public static event EventHandler<EventArgs> ProgramCreated;
         private static ConcurrentDictionary<string , NetworkDeviceBase> NetDeviceList = new ConcurrentDictionary<string , NetworkDeviceBase>();
+        private static ConcurrentDictionary<string, IDeviceConfig> ConfigList = new ConcurrentDictionary<string, IDeviceConfig>();
         private static Program p;
         private static List<IPlugin> plugins = new List<IPlugin>();
         public static string Test { get; set; } = "test123456";
@@ -206,14 +235,39 @@ namespace ICPFCore
             
             //***** +測試空間+ *****//
             EthernetDeviceConfigModel ethModel = new EthernetDeviceConfigModel();
-            ethModel.DeviceName = "Keyence8500_1";
+            ethModel.DeviceName = "MBUS_2";
             ethModel.CommunicationProtocol = CommunicationProtocol.KvHost;
-            ethModel.IP = "192.168.0.10";
-            ethModel.Port = 8501;
+            ethModel.IP = "127.0.0.1";
+            ethModel.Port = 502;
+
+            //新增Tag列表
+            ethModel.TagList.Add(new Tag() {
+                TagName = "1F溫度表_溫度",
+                Address = "0",
+                DataType = DataType.UInt16,
+            });
+            ethModel.TagList.Add(new Tag()
+            {
+                TagName = "2F溫度表_溫度",
+                Address = "1",
+                DataType = DataType.UInt16,
+            });
+            ethModel.TagList.Add(new Tag()
+            {
+                TagName = "1F溫度表_濕度",
+                Address = "2",
+                DataType = DataType.UInt16,
+            });
+            ethModel.TagList.Add(new Tag()
+            {
+                TagName = "2F溫度表_濕度",
+                Address = "3",
+                DataType = DataType.UInt16,
+            });
             string jsonString = JsonConvert.SerializeObject(ethModel , Formatting.Indented);
             var dirPath = System.IO.Directory.GetCurrentDirectory();
             // 指定本地文件路径
-            string filePath = $"{dirPath}/DeviceConfig/Keyence.json";
+            string filePath = $"{dirPath}/DeviceConfig/Modbus.json";
             //File.WriteAllText(filePath, jsonString);
             //***** -測試空間- *****//
             //return;
@@ -455,6 +509,7 @@ namespace ICPFCore
                             Console.WriteLine("找到配置檔[ 網路 ]設備" + filePath);
                             NetDeviceList.TryAdd(deviceName, plc);
                             Console.WriteLine("添加設備" + deviceName);
+                            ConfigList.TryAdd(deviceName, ethModel);
                         }
                         else
                         {
@@ -520,7 +575,11 @@ namespace ICPFCore
                 }                
             });
         }
-
+        /// <summary>
+        /// 提供讀取模組，執行讀取指令
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns>通訊讀取完成結果以及陣列數據和狀態</returns>
         public async Task<QJDataArray> GetData(ReadDataModel model) 
         {
             QJDataArray rData = new QJDataArray();
@@ -656,6 +715,11 @@ namespace ICPFCore
             return rData;
 
         }
+        /// <summary>
+        /// 提供寫入模組，執行寫入指令
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns>通訊寫入完成結果和狀態</returns>
         public async Task<QJDataArray> SetData(WriteDataModel model)
         {
             QJDataArray rData = new QJDataArray();
@@ -752,7 +816,48 @@ namespace ICPFCore
             }
             return rData;
         }
+        public async Task<QJTagDataArray> GetTag(string deviceName , string tagName)
+        {
+            QJTagDataArray rData = new QJTagDataArray();
+            if (ConfigList.TryGetValue(deviceName , out IDeviceConfig model))
+            {   
+                var findTag = model.TagList.Where(x => x.TagName == tagName).FirstOrDefault();
+                if (findTag == null)
+                {
+                    rData.IsOk= false;
+                    rData.Message = "找不到指定的TagName";
+                    return rData;
+                }
 
+                var fTagName = findTag.TagName;
+                var fAddress = findTag.Address;
+                var fDataType = findTag.DataType;
+                var fLength = findTag.Length;
+                switch (model)
+                {
+                    case EthernetDeviceConfigModel:
+                        var ReadRes = await GetData(new ReadDataModel() {
+                            DeviceName = deviceName,
+                            Address = fAddress,
+                            DatasType = fDataType,
+                            ReadLength = fLength,
+                        });
+                        return new QJTagDataArray() { IsOk = ReadRes.IsOk, TagName = fTagName, DeviceName = deviceName, DataType = fDataType, Data = ReadRes.Data, Message = ReadRes.Message };                        
+                    case SerialDeviceConfigModel:
+                        break;
+                    default:
+                        //throw new Exception("找的到設備，但是是無法辨識的配置檔!");
+                        return new QJTagDataArray() { IsOk = false, Message = "找的到設備，但是是無法辨識的配置檔!" };
+                }
+            }
+            return new QJTagDataArray() { IsOk = false, Message = "找不到指定的設備!" };
+        }
+
+        /// <summary>
+        /// 解析通訊型通訊，物件實例化
+        /// </summary>
+        /// <param name="cProtocol"></param>
+        /// <returns></returns>
         public static (bool result, NetworkDeviceBase plcBase) DecodeEthernetDeviceProtocol(CommunicationProtocol cProtocol)
         {
             switch (cProtocol)
@@ -776,6 +881,10 @@ namespace ICPFCore
             }
             return (true, null);
         }
+        /// <summary>
+        /// 授權計時器
+        /// </summary>
+        /// <param name="state"></param>
         private static void TimerCallback(object state)
         {
             if (elapsedTime >= MaxElapsedTime )
@@ -811,6 +920,9 @@ namespace ICPFCore
             }
             
         }
+        /// <summary>
+        /// 測試人員暫時測試授權
+        /// </summary>
         private static void ForTest()
         {
             if (!isAuthorized && ForTestCount < ForTestCounter)

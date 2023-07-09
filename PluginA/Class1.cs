@@ -5,12 +5,12 @@ namespace PluginA
 
     public class PluginA : PluginBase
     {
-        private Program Core;
-        public string PluginName { get; } = "PluginA";
+
+        public override string PluginName { get; set; } = "PluginA";
         private CancellationTokenSource cts = new CancellationTokenSource();
 
 
-        public void onLoading()
+        public override void onLoading()
         {
             Console.WriteLine(PluginName + " Loading...");
             // 获取 CancellationToken
@@ -18,13 +18,22 @@ namespace PluginA
             Task.Run(async () => {
                 while (!token.IsCancellationRequested)
                 {
-                    //Console.WriteLine(DateTime.Now.ToString());
-                    await Task.Delay(1000);
+                    var getTagRes = await Core.GetTag("MBUS_2" , "1F溫度表_溫度");
+                    if (getTagRes.IsOk)
+                    {
+                        Console.WriteLine(string.Format(PluginName + "getTagRes執行狀態:{0} 標籤名稱: {1} 數據: {2}", getTagRes.IsOk, getTagRes.TagName , DecodeData(getTagRes)));
+                    }
+                    else
+                    {
+                        Console.WriteLine(string.Format(PluginName + "getTagRes執行狀態:{0} 錯誤訊息: {1}", getTagRes.IsOk, getTagRes.Message));
+                    }
+                    Console.WriteLine(DateTime.Now.ToString());
+                    await Task.Delay(100);
                 }
-            });
+            } , cts.Token );
             /*
             Task.Run(async () => {
-                while (!token.IsCancellationRequested || false)
+                while (!token.IsCancellationRequested )
                 {
                     //Console.WriteLine("PluginA : " + MemoryShareManager.instance.Data);
                     //Core.DoSomething ("PluginA");
@@ -78,16 +87,10 @@ namespace PluginA
             */
         }
 
-        public void onCloseing()
+        public override void onCloseing()
         {
             cts.Cancel();
             Console.WriteLine(PluginName + " Closeing...");
-        }
-
-        public void SetInstance(object dd)
-        {
-            //Program program = (Program)dd;
-            //Core = program;
         }
 
         //***** 事件偵測 *****//
