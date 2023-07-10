@@ -14,7 +14,7 @@ namespace WinFormPluginFrameworkTest
             InitializeComponent();
             pfc = new PFC.PFC();
             pfc.CommunicationStatusEvent += Pfc_CommunicationErrorEvent;
-            pfc.Connect("127.0.0.1:5000");
+            pfc.Connect();
         }
 
         private void Pfc_CommunicationErrorEvent(object? sender, string e)

@@ -42,9 +42,9 @@ namespace ICPFWebAPI.Controllers
                         //Note:暫時先生成歷史數據用於測試圖表
                         //5760筆一天
                        
-                        model.Data.Add("電壓R相", GetData1());
-                        model.Data.Add("電壓S相", GetData1());
-                        model.Data.Add("電壓T相", GetData1());
+                        model.Data.Add("電壓R相", GetData1(220 , 240));
+                        model.Data.Add("電壓S相", GetData1(110 , 130));
+                        model.Data.Add("電壓T相", GetData1(22 , 26));
                     }
                     break;
                 case "機臺電流":
@@ -55,7 +55,7 @@ namespace ICPFWebAPI.Controllers
 
             return model;
         }
-        public List<DtPoint> GetData1()
+        public List<DtPoint> GetData1(int min , int max)
         {
             List<DtPoint> data = new List<DtPoint>();
 
@@ -71,7 +71,7 @@ namespace ICPFWebAPI.Controllers
 
                 DateTime resultTime = startTime.Add(timeSpan); // 將時間間隔加到起始時間上得到結果時間
 
-                data.Add(new DtPoint() { Value = r.Next(219, 235), DateTime = resultTime });
+                data.Add(new DtPoint() { Value = r.Next(min, max), DateTime = resultTime });
             }
             return data;
         }
