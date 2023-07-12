@@ -38,5 +38,9 @@ namespace PluginFramework
         /// 設定定義好的標籤
         /// </summary>
         void SetTag() { }
+        /// <summary>
+        /// 主迴圈偵聽指令廣播
+        /// </summary>
+        void CommandTrig(string args) { }
     }
 }

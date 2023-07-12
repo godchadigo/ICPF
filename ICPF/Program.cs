@@ -205,7 +205,7 @@ namespace ICPFCore
     }
     public class Program 
     {
-        public static event EventHandler<EventArgs> ProgramCreated;
+        public static event EventHandler<EventArgs> ProgramCreated;        
         private static ConcurrentDictionary<string , NetworkDeviceBase> NetDeviceList = new ConcurrentDictionary<string , NetworkDeviceBase>();
         private static ConcurrentDictionary<string, IDeviceConfig> ConfigList = new ConcurrentDictionary<string, IDeviceConfig>();
         private static Program p;
@@ -315,6 +315,13 @@ namespace ICPFCore
             while (true)
             {                
                 string input = Console.ReadLine();  //當街收到指令時中斷進入下面的˙判斷
+
+                
+                foreach (var plugin in AsmList)
+                {
+                    //通知插件指令觸發
+                    plugin._task.CommandTrig(input);                    
+                }
 
                 if (input.Equals("stop", StringComparison.OrdinalIgnoreCase))
                 {

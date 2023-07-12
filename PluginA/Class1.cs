@@ -1,9 +1,10 @@
 ﻿using ICPFCore;
+using PluginFramework;
 
 namespace PluginA
 {
 
-    public class PluginA : PluginBase
+    public class PluginA : PluginBase , IPlugin
     {
 
         public override string PluginName { get; set; } = "PluginA";
@@ -21,76 +22,32 @@ namespace PluginA
                     var getTagRes = await Core.GetTag("MBUS_2" , "1F溫度表_溫度");
                     if (getTagRes.IsOk)
                     {
-                        Console.WriteLine(string.Format(PluginName + "getTagRes執行狀態:{0} 標籤名稱: {1} 數據: {2}", getTagRes.IsOk, getTagRes.TagName , DecodeData(getTagRes)));
+                        //Console.WriteLine(string.Format(PluginName + "getTagRes執行狀態:{0} 標籤名稱: {1} 數據: {2}", getTagRes.IsOk, getTagRes.TagName , DecodeData(getTagRes)));
                     }
                     else
                     {
-                        Console.WriteLine(string.Format(PluginName + "getTagRes執行狀態:{0} 錯誤訊息: {1}", getTagRes.IsOk, getTagRes.Message));
+                        //Console.WriteLine(string.Format(PluginName + "getTagRes執行狀態:{0} 錯誤訊息: {1}", getTagRes.IsOk, getTagRes.Message));
                     }
-                    Console.WriteLine(DateTime.Now.ToString());
+                    //Console.WriteLine(DateTime.Now.ToString());
                     await Task.Delay(100);
                 }
             } , cts.Token );
-            /*
-            Task.Run(async () => {
-                while (!token.IsCancellationRequested )
-                {
-                    //Console.WriteLine("PluginA : " + MemoryShareManager.instance.Data);
-                    //Core.DoSomething ("PluginA");
-                    var keyenceTask = Task.Run(async () => {
-                        var keyenceResult = await Core.GetData(new ReadDataModel()
-                        {
-                            DeviceName = "Keyence8500_1",
-                            Address = "DM10",
-                            ReadLength = 100,
-                            DatasType = DataType.Int16,
-                        });
-                        if (keyenceResult.IsOk)
-                        {
-                            Console.WriteLine(string.Format(PluginName + "Keyence執行狀態:{0} 數據: {1}", keyenceResult.IsOk, DecodeData(keyenceResult)));
-                        }
-                        else
-                        {
-                            Console.WriteLine(string.Format(PluginName + "Keyence執行狀態:{0} 錯誤訊息: {1}", keyenceResult.IsOk, keyenceResult.Message));
-                        }
-                    }) ;
 
-                    var vigorTask = Task.Run(async () => {
-                        var vigorResult = await Core.GetData(new ReadDataModel()
-                        {
-                            DeviceName = "VSM_1",
-                            Address = "D10",
-                            ReadLength = 100,
-                            DatasType = DataType.Int16,
-                        });
-                        if (vigorResult.IsOk)
-                        {
-                            Console.WriteLine(string.Format(PluginName + "vigorResult 執行狀態:{0} 數據: {1}", vigorResult.IsOk, DecodeData(vigorResult)));
-                        }
-                        else
-                        {
-                            Console.WriteLine(string.Format(PluginName + "vigorResult 執行狀態:{0} 錯誤訊息: {1}", vigorResult.IsOk, vigorResult.Message));
-                        }
-                    });
-
-                    var keyenceResult = await Core.GetData(new ReadDataModel()
-                    {
-                        DeviceName = "MC_1",
-                        Address = "D500",
-                        ReadLength = 1,
-                        DatasType = DataType.Int16,
-                    });
-
-                    await Task.Delay(1000);
-                }
-            }, token);
-            */
         }
 
         public override void onCloseing()
         {
             cts.Cancel();
             Console.WriteLine(PluginName + " Closeing...");
+        }
+
+        public void CommandTrig(string args)
+        {
+            if (args == "plugina")
+            {
+                Console.WriteLine("想我嗎?");
+            }
+            //Console.WriteLine(PluginName + "接收到 : " + args);
         }
 
         //***** 事件偵測 *****//
