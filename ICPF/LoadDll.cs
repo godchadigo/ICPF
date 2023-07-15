@@ -34,13 +34,19 @@ namespace PluginFramework
         /// </summary>
         public string filepath = string.Empty;
         /// <summary>
+        /// 文件資料夾路徑
+        /// </summary>
+        public string dirpath = string.Empty;
+        /// <summary>
         /// 指定位置的插件库集合
         /// </summary>
         AssemblyDependencyResolver resolver { get; set; }
 
         public bool LoadFile(string filepath)
         {
+            if (filepath == null) return false;
             this.filepath = filepath;
+            this.dirpath = Path.GetDirectoryName(filepath);
             try
             {
                 resolver = new AssemblyDependencyResolver(filepath);

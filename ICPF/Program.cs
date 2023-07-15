@@ -1,6 +1,7 @@
 ﻿using HslCommunication;
 using HslCommunication.Core;
 using HslCommunication.Core.Net;
+using ICPF.Config;
 using Microsoft.International.Converters.TraditionalChineseToSimplifiedConverter;
 using Newtonsoft.Json;
 using PluginFramework;
@@ -8,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Xml.Linq;
 
@@ -15,8 +17,9 @@ namespace ICPFCore
 {
     public class PluginBase : IPlugin
     {
+        public virtual string Uuid { get; set; } = Guid.NewGuid().ToString();
         public virtual string PluginName { get; set; } = "Base";
-        public static Program Core { get; set; }
+        public static Program Core { get; set; }        
         public virtual void onLoading()
         {            
             Console.WriteLine(PluginName + " Loading...");
@@ -439,6 +442,57 @@ namespace ICPFCore
             Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Black;
         }
+
+        #region Config Manager
+        
+        /// <summary>
+        /// 創建新的配置檔
+        /// </summary>
+        /// <param name="pb"></param>
+        /// <param name="configName"></param>
+        /// <returns></returns>
+        public (bool isExist , Config config) CreateConfig(PluginBase pb , string configName)
+        {
+            Config config = new Config();
+            foreach (var asm in AsmList)
+            {
+                if (asm._task.Uuid == pb.Uuid)
+                {
+                    if (asm.filepath != null)
+                    {
+                        var newDir = Path.Combine(asm.dirpath, asm._task.PluginName);
+                        if (!Directory.Exists(asm.filepath))
+                        {                            
+                            Directory.CreateDirectory(newDir);
+                        }
+                       
+                        var newDirPath = Path.Combine(newDir, configName + ".json");
+                        if (!File.Exists(newDirPath))
+                        {
+                            using (File.Create(newDirPath))
+                            {
+                                Console.WriteLine(string.Format("Create Config : PluginName:{0} PluginPath:{1}", asm._task.PluginName, newDirPath));
+                                config.configFilePath = newDirPath;
+                                config.configDirPath = newDir;
+                                config.configName = configName;
+                                //config.Init();
+                                //config.Save();
+                                return (false, config);
+                            }
+                        }
+                        else
+                        {
+                            return (true, config);
+                        }                                                
+                    }                    
+                }
+            }
+            return (false , config);
+        }
+        public void RemoveConfig() { }
+        
+
+        #endregion
         public static LoadDll LoadDLL(string filePath)
         {
             var load = new LoadDll();

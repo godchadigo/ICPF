@@ -6,8 +6,17 @@ using System.Threading.Tasks;
 
 namespace PluginFramework
 {
+    /// <summary>
+    /// 插件介面接口
+    /// </summary>
+    /// <remarks>
+    /// <para>使用者可以自行重寫介面裡的邏輯，但是有幾點須特別注意:</para>
+    /// <para>1.Uuid必須實作。</para>
+    /// <para>2.CommandTrig是由主核心注入字串</para>
+    /// </remarks>
     public interface IPlugin
     {
+        string Uuid { get; }
         string PluginName { get; }
         void onLoading() { }
         void onCloseing() { }
