@@ -28,6 +28,7 @@ namespace ICPFCore
         {
             Console.WriteLine(PluginName + " Closeing...");
         }
+        public virtual void CommandTrig(string args) { }  
         public void SetInstance(object dd)
         { 
             Core = (Program) dd;
@@ -44,7 +45,7 @@ namespace ICPFCore
         {
             return await Core.GetTag(deviceName, tagName);
         }
-        public void Test() { }
+        
     }
 
     public enum IRWDataOperation
