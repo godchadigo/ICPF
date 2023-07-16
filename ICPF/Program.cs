@@ -40,6 +40,10 @@ namespace ICPFCore
         {
             return await Core.SetData(model);
         }
+        public virtual async Task<QJTagDataArray> GetTag(string deviceName, string tagName)
+        {
+            return await Core.GetTag(deviceName, tagName);
+        }
         public void Test() { }
     }
 
@@ -475,13 +479,17 @@ namespace ICPFCore
                                 config.configFilePath = newDirPath;
                                 config.configDirPath = newDir;
                                 config.configName = configName;
-                                //config.Init();
-                                //config.Save();
+                                config.Load();
+                                
                                 return (false, config);
                             }
                         }
                         else
                         {
+                            config.configFilePath = newDirPath;
+                            config.configDirPath = newDir;
+                            config.configName = configName;
+                            config.Load();
                             return (true, config);
                         }                                                
                     }                    

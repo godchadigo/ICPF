@@ -11,20 +11,24 @@ namespace ICPF.Config
         public string configFilePath { get; set; } = string.Empty;
         public string configDirPath { get; set; } = string.Empty;
         public string configName { get; set; } = string.Empty;
-        public string configBuffer { get;set; } = string.Empty;
-        public Dictionary<object , object> configModelBuffer { get; set; }
-        public string configSaveBuffer { get;set; } = string.Empty;
-        public Config() 
+        public string configBuffer { get; set; } = string.Empty;
+        public Dictionary<string, dynamic> configModelBuffer { get; set; } = new Dictionary<string, dynamic>();
+        public string configSaveBuffer { get; set; } = string.Empty;
+        public Config()
+        {
+
+        }
+        public void Load()
         {
             try
             {
                 configBuffer = File.ReadAllText(configFilePath);
-                configModelBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject < Dictionary<object, object> > (configBuffer);
+                configModelBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(configBuffer);
             }
             catch (Exception ex)
             {
 
-            }            
+            }
         }
         /// <summary>
         /// 獲取配置檔名稱
@@ -53,19 +57,35 @@ namespace ICPF.Config
         //配置檔管理器，需要有創見檔案及資料夾的功能，和讀寫的功能，打算用json製作
 
         #region 讀取方法
+        public (bool isOk, T value) Read<T>(string key)
+        {
+            var findRes = configModelBuffer.Where(x => x.Key == key).FirstOrDefault();
+            if (findRes.Key != null && findRes.Value != null)
+            {
+                try
+                {
+                    var obj = Newtonsoft.Json.JsonConvert.DeserializeObject<T>(findRes.Value.ToString());
+                    return (true, obj);
+                }
+                catch  (Exception ex) {
+                    return (false, default(T));
+                }                                
+            }
+            return (false, default(T));
+        }
         /// <summary>
         /// 讀取Object類型物件
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public (bool isOk,object value) Read(object key)
+        public (bool isOk, object value) Read(string key)
         {
             var findRes = configModelBuffer.Where(x => x.Key == key).FirstOrDefault();
             if (findRes.Key != null && findRes.Value != null)
             {
-                return (true , findRes.Value);
+                return (true, findRes.Value);
             }
-            return (false , null);
+            return (false, null);
         }
         /// <summary>
         /// 讀取Bool物件
@@ -77,11 +97,11 @@ namespace ICPF.Config
             var findRes = configModelBuffer.Where(x => x.Key == key).FirstOrDefault();
             bool result = false;
             if (findRes.Key != null && findRes.Value != null)
-            {                
+            {
                 var convertRes = bool.TryParse(findRes.Value.ToString(), out result);
                 return (convertRes, result);
             }
-            return (false , result);
+            return (false, result);
         }
         /// <summary>
         /// 讀取Short物件
@@ -196,15 +216,17 @@ namespace ICPF.Config
             return (false, result);
         }
         #endregion
-        
-        public void Write(object key , object value)
-        {      
-            configModelBuffer.Add(key , value);
-            configSaveBuffer = Newtonsoft.Json.JsonConvert.SerializeObject(configModelBuffer , Newtonsoft.Json.Formatting.Indented);            
+
+        public void Write(string key, object value)
+        {
+            
+            string serializedValue = Newtonsoft.Json.JsonConvert.SerializeObject(value);
+            configModelBuffer.Add(key, value);
+            configSaveBuffer = Newtonsoft.Json.JsonConvert.SerializeObject(configModelBuffer, Newtonsoft.Json.Formatting.Indented);
         }
         public bool Remove(object key)
         {
-            var findRes = configModelBuffer.FirstOrDefault(x => x.Key == key);            
+            var findRes = configModelBuffer.FirstOrDefault(x => x.Key == key);
             if (findRes.Key != null && findRes.Value != null)
             {
                 configModelBuffer.Remove(findRes.Key);
@@ -214,9 +236,9 @@ namespace ICPF.Config
             return false;
         }
         public void Init()
-        {            
-            configModelBuffer = new Dictionary<object, object>();
-            configSaveBuffer = Newtonsoft.Json.JsonConvert.SerializeObject(configModelBuffer, Newtonsoft.Json.Formatting.Indented);            
+        {
+            //configModelBuffer = new Dictionary<string, object>();
+            configSaveBuffer = Newtonsoft.Json.JsonConvert.SerializeObject(configModelBuffer, Newtonsoft.Json.Formatting.Indented);
         }
         public void Save()
         {
@@ -227,12 +249,16 @@ namespace ICPF.Config
             catch (Exception ex)
             {
                 Console.WriteLine("Save Crash :" + ex.ToString());
-            }            
+            }
         }
     }
     public class ConfigModel
     {
-        public Dictionary<object , object> KVList { get; set; }
+        public Dictionary<object, object> KVList { get; set; }
     }
-
+    public class ConfigKVModel
+    {
+        public object Key { get; set; }
+        public object Value { get; set; }
+    }
 }

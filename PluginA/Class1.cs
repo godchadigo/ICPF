@@ -19,7 +19,7 @@ namespace PluginA
             Task.Run(async () => {
                 while (!token.IsCancellationRequested)
                 {
-                    var getTagRes = await Core.GetTag("MBUS_2" , "1F溫度表_溫度");
+                    var getTagRes = await GetTag("MBUS_2" , "1F溫度表_溫度");
                     if (getTagRes.IsOk)
                     {
                         //Console.WriteLine(string.Format(PluginName + "getTagRes執行狀態:{0} 標籤名稱: {1} 數據: {2}", getTagRes.IsOk, getTagRes.TagName , DecodeData(getTagRes)));
@@ -28,8 +28,8 @@ namespace PluginA
                     {
                         //Console.WriteLine(string.Format(PluginName + "getTagRes執行狀態:{0} 錯誤訊息: {1}", getTagRes.IsOk, getTagRes.Message));
                     }
-                    //Console.WriteLine(DateTime.Now.ToString());
-                    await Task.Delay(100);
+                    Console.WriteLine(DateTime.Now.ToString());
+                    await Task.Delay(1000);
                 }
             } , cts.Token );
 
