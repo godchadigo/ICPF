@@ -10,6 +10,7 @@ namespace PluginA
         private CancellationTokenSource cts = new CancellationTokenSource();
         public override void onLoading()
         {
+            Core.ForTest();
             Console.WriteLine(PluginName + " Loading...");
             
             CancellationToken token = cts.Token;

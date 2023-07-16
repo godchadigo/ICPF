@@ -281,7 +281,7 @@ namespace ICPFCore
             //return;
 
             //暫時授權
-            ForTest();
+            //ForTest();
 
             // 初始化计时器
             timer = new Timer(TimerCallback, null, 0, 1000); // 设置计时器间隔为1秒
@@ -317,6 +317,32 @@ namespace ICPFCore
 
             #region 啟動設備上下線事件偵聽任務            
             EventTask();
+            #endregion
+
+            #region 授權檢測
+            if (!isAuthorized)
+            {
+                Console.WriteLine("----------------------------------");
+                Console.WriteLine("----------------------------------");
+                Console.WriteLine("----------------------------------");
+                Console.WriteLine("---------- ![授權失敗]! ----------");
+                Console.WriteLine("----------------------------------");
+                Console.WriteLine("----------------------------------");
+                Console.WriteLine("----------------------------------");
+                Console.WriteLine("按一下離開!");
+                Console.ReadKey();
+                return;
+            }
+            else
+            {
+                Console.WriteLine("++++++++++++++++++++++++++++++++++");
+                Console.WriteLine("++++++++++++++++++++++++++++++++++");
+                Console.WriteLine("++++++++++++++++++++++++++++++++++");
+                Console.WriteLine("++++++++++ ![授權成功]! ++++++++++");
+                Console.WriteLine("++++++++++++++++++++++++++++++++++");
+                Console.WriteLine("++++++++++++++++++++++++++++++++++");
+                Console.WriteLine("++++++++++++++++++++++++++++++++++");
+            }
             #endregion
 
             #region 控制台指令偵測器                        
@@ -993,7 +1019,7 @@ namespace ICPFCore
         /// <summary>
         /// 測試人員暫時測試授權
         /// </summary>
-        private static void ForTest()
+        public void ForTest()
         {
             if (!isAuthorized && ForTestCount < ForTestCounter)
                 isAuthorized = true;
