@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ICPF\ICPF.csproj" />
-    <ProjectReference Include="..\PluginFramework\PluginFramework.csproj" />
   </ItemGroup>
 
 </Project>
