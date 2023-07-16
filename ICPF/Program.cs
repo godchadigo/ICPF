@@ -329,7 +329,7 @@ namespace ICPFCore
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("----------------------------------");
-                Console.WriteLine("按一下離開!");
+                Console.WriteLine("按一下離開!"); 
                 Console.ReadKey();
                 return;
             }
