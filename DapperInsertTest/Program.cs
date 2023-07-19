@@ -1,37 +1,60 @@
-﻿using System.Data.SqlClient;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Data.SqlClient;
 using Dapper;
-string server = "127.0.0.1";
-string user = "sa";
-string password = "Asd279604823";
-string database = "QJ";
+using DapperExtensions;
+using MySql.Data.MySqlClient;
 
-string connectionString = $"Server={server};User Id={user};Password={password};Database={database};";
+string server = "192.168.0.104";
+string user = "root";
+string password = "root";
+string database = "qj";
 
-using (SqlConnection cn = new SqlConnection(connectionString))
+string connectionString = $"Server={server};Database={database};Uid={user};Pwd={password};";
+
+using (MySqlConnection cn = new MySqlConnection("server=127.0.0.1;database=qj;uid=root;pwd=root;charset='utf8';SslMode=None"))
 {
     try
     {
         cn.Open();
         //int personId = 1;
         //PluginUploaderModel person = cn.Get<PluginUploaderModel>(personId);
-    
 
+        /*
         var query = "INSERT INTO PluginUploader (Uuid, TagName, Message, Data) VALUES (@Uuid, @TagName, @Message, @Data)";
-        var newId = cn.Insert<Guid, PluginUploader>(new PluginUploader { TagName = "D0", Message = "你好", Data = "kk" });
+        var uuid = Guid.NewGuid().ToString();
+        var data = new PluginUploader() { Uuid = "111", TagName = "a", Message = "a", Data = "a" };
+        var newId = cn.Insert(data);
         Console.WriteLine("向資料庫插入了一筆資料");
+        */
+        // 執行查詢並映射結果到Customer類別的集合
+        /*
+        string query = "SELECT * FROM PluginUploader";
+        IEnumerable<PluginUploader> customers = cn.Query<PluginUploader>(query);
+
+        // 使用查詢結果
+        foreach (PluginUploader customer in customers)
+        {
+            Console.WriteLine($"ID: {customer.Uuid}, Name: {customer.TagName}, Email: {customer.Message}");
+        }
+        */
+        var data = new pluginuploader() { Uuid = Guid.NewGuid().ToString() , Name = "a" };
+        string insertQuery = "INSERT INTO pluginuploader (Uuid, Name) VALUES (@Uuid, @Name)";
+        cn.Execute(insertQuery, data);
         cn.Close();
     }
-    catch (Exception ex) { }
+    catch (Exception ex) 
+    {
+        Console.WriteLine(ex.Message);
+    }
 }
 
 #region SQL Entity   
-[Table("PluginUploader")]
-public class PluginUploader
+[Table("pluginuploader")]
+public class pluginuploader
 {
     [Key]
-    public Guid Uuid { get; set; }
-    public string TagName { get; set; }
-    public string Message { get; set; }
-    public string Data { get; set; }
+    public string Uuid { get; set; }
+    public string Name { get; set; }
 }
 #endregion
