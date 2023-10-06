@@ -9,7 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ICPF\ICPF.csproj" />
+    <Reference Include="ICPF">
+      <HintPath>..\ICPF\bin\Debug\net6.0\ICPF.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

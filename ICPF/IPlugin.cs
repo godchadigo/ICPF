@@ -51,5 +51,6 @@ namespace PluginFramework
         /// 主迴圈偵聽指令廣播
         /// </summary>
         void CommandTrig(string args) { }
+
     }
 }

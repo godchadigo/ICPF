@@ -45,16 +45,28 @@ namespace ICPFCore
         {
             return await Core.GetTag(deviceName, tagName);
         }
+        public virtual async Task<QJDataArray> GetMachins()
+        {
+            return await Core.GetMachins();
+        }
         
     }
 
     public enum IRWDataOperation
     {
-        Read = 1,
-        Write = 2
+        ReadData = 1,
+        WriteData = 2,
+        Command = 3
+    }
+    public enum IRWDataCommand
+    {
+        GetMacines = 1,
+        GetTagName = 2,
+        GetTagGroup = 3,
     }
     public interface IRWData
     {
+        string Uuid { get; set; }
         /// <summary>
         /// 設備名稱
         /// 使用者需要指定定義好的設備
@@ -70,27 +82,31 @@ namespace ICPFCore
     }
     public class BaseDataModel : IRWData
     {
+        public string Uuid { get; set; }
         public string DeviceName { get; set; }
         public string Address { get; set; }
         public IRWDataOperation iRWDataOperation { get; set; }
+        public IRWDataCommand iRWCommand { get;set; }
 
     }
     public class ReadDataModel : IRWData
     {
+        public string Uuid { get; set; }
         public string DeviceName { get; set; }
         public string Address { get; set; }
         public ushort ReadLength { get; set; }
         public DataType DatasType { get; set; }
-        public IRWDataOperation iRWDataOperation { get; } = IRWDataOperation.Read;
+        public IRWDataOperation iRWDataOperation { get; } = IRWDataOperation.ReadData;
 
     }
     public class WriteDataModel : IRWData
     {
+        public string Uuid { get; set; }
         public string DeviceName { get; set; }
         public string Address { get; set; }
         public object[] Datas { get; set; }
         public DataType DatasType { get; set; }
-        public IRWDataOperation iRWDataOperation { get; } = IRWDataOperation.Write;
+        public IRWDataOperation iRWDataOperation { get; } = IRWDataOperation.WriteData;
     }
     public enum DataType
     {
@@ -118,6 +134,7 @@ namespace ICPFCore
     }
     public class QJDataArray
     {
+        public string Uuid { get; set; }
         public bool IsOk { get; set; }
         public string DeviceName { get; set; }
         public object[] Data { get; set; }
@@ -132,8 +149,13 @@ namespace ICPFCore
         public string Message { get; set; }
     }
     public class QJTagDataArray : QJDataArray
-    {
+    {        
         public string TagName { get; set; }
+    }
+    public class QJTagGroupDataArray : QJDataArray
+    {        
+        public string TagName { get; set; }
+        public Dictionary<string , QJDataArray> TagData { get; set; }
     }
     /// <summary>
     /// v1.初始化，支持單一數據讀取
@@ -149,6 +171,7 @@ namespace ICPFCore
     /// </remarks>
     public class Tag
     {
+        public string GroupName { get; set; }
         public string TagName { get; set; }
         public bool IsOk { get; set; } = false;        
         public string Address { get; set; }
@@ -240,7 +263,7 @@ namespace ICPFCore
         
         static void Main(string[] args)
         {
-            
+            isAuthorized = true;
             //***** +測試空間+ *****//
             EthernetDeviceConfigModel ethModel = new EthernetDeviceConfigModel();
             ethModel.DeviceName = "MBUS_2";
@@ -401,6 +424,18 @@ namespace ICPFCore
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.BackgroundColor = ConsoleColor.Black;
                     WriteLine(GetPlugins());
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.BackgroundColor = ConsoleColor.Black;
+                }
+                if (input.Equals("machins", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    var result = GetInstance().GetMachins().WaitAsync(TimeSpan.FromMilliseconds(100));
+                    foreach (var device in result.Result.Data)
+                    {
+                        WriteLine("找到設備" + device);
+                    }                    
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.BackgroundColor = ConsoleColor.Black;
                 }
@@ -679,6 +714,7 @@ namespace ICPFCore
         public async Task<QJDataArray> GetData(ReadDataModel model) 
         {
             QJDataArray rData = new QJDataArray();
+            rData.Uuid = model.Uuid;
             rData.IsOk = false;
             //判定設備有在列表內
             if (NetDeviceList.TryGetValue(model.DeviceName, out NetworkDeviceBase pack))
@@ -819,6 +855,7 @@ namespace ICPFCore
         public async Task<QJDataArray> SetData(WriteDataModel model)
         {
             QJDataArray rData = new QJDataArray();
+            rData.Uuid = model.Uuid;
             rData.IsOk = false;
             //判定設備有在列表內
             if (NetDeviceList.TryGetValue(model.DeviceName, out NetworkDeviceBase pack))
@@ -912,6 +949,59 @@ namespace ICPFCore
             }
             return rData;
         }
+        public async Task<QJTagGroupDataArray> GetTagGroup(string deviceName, string groupName)
+        {
+            //Dictionary<string, QJDataArray> tagData = new Dictionary<string, QJDataArray>();
+            QJTagGroupDataArray rData = new QJTagGroupDataArray();
+            rData.TagData = new Dictionary<string, QJDataArray>();
+            if (ConfigList.TryGetValue(deviceName, out IDeviceConfig model))
+            {
+
+                var findGroupTag = model.TagList.Where(x => x.GroupName == groupName).ToList();
+                if (findGroupTag == null)
+                {
+                    rData.IsOk = false;
+                    rData.Message = "找不到指定的TagGroup";
+                    return rData;
+                }
+
+                foreach (var tag in findGroupTag)
+                {
+                    var fTagName = tag.TagName;
+                    var fAddress = tag.Address;
+                    var fDataType = tag.DataType;
+                    var fLength = tag.Length;
+
+                    switch (model)
+                    {
+                        case EthernetDeviceConfigModel:
+                            var ReadRes = await GetData(new ReadDataModel()
+                            {
+                                DeviceName = deviceName,
+                                Address = fAddress,
+                                DatasType = fDataType,
+                                ReadLength = fLength,
+                            });
+                            rData.TagData.Add(fTagName, ReadRes);
+                            //return new QJTagGroupDataArray() { IsOk = ReadRes.IsOk, TagName = fTagName, DeviceName = deviceName, DataType = fDataType, Data = ReadRes.Data, Message = ReadRes.Message };
+                            break;
+                        case SerialDeviceConfigModel:
+                            break;
+                        default:
+                            //throw new Exception("找的到設備，但是是無法辨識的配置檔!");
+                            return new QJTagGroupDataArray() { IsOk = false, Message = "找的到設備，但是是無法辨識的配置檔!" };
+                    }
+                }
+
+                //rData.Uuid = Guid.NewGuid().ToString();
+                rData.IsOk = true;
+                //rData.TagData = tagData;
+                rData.DeviceName = deviceName;                
+                rData.Message = "標籤群組解析成功!";
+                return rData;
+            }
+            return new QJTagGroupDataArray() { IsOk = false, Message = "找不到指定的設備!" };
+        }
         public async Task<QJTagDataArray> GetTag(string deviceName , string tagName)
         {
             QJTagDataArray rData = new QJTagDataArray();
@@ -948,7 +1038,26 @@ namespace ICPFCore
             }
             return new QJTagDataArray() { IsOk = false, Message = "找不到指定的設備!" };
         }
+        /// <summary>
+        /// 獲取當前配置黨載入的設備
+        /// </summary>
+        /// <returns></returns>
+        public async Task<QJTagDataArray> GetMachins()
+        {
+            QJTagDataArray result = new QJTagDataArray();
+            result.DataType = DataType.String;
 
+            result.Data = new string[NetDeviceList.Count];
+            int count = 0;
+            foreach (var device in NetDeviceList)
+            {                
+                result.Data[count] = device.Key;
+                count++;
+            }
+            result.IsOk = true;
+            return result;
+
+        }
         /// <summary>
         /// 解析通訊型通訊，物件實例化
         /// </summary>

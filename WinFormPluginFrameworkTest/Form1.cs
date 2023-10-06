@@ -14,7 +14,7 @@ namespace WinFormPluginFrameworkTest
             InitializeComponent();
             pfc = new PFC.PFC();
             pfc.CommunicationStatusEvent += Pfc_CommunicationErrorEvent;
-            pfc.Connect();
+            pfc.Connect("127.0.0.1:5000");
         }
 
         private void Pfc_CommunicationErrorEvent(object? sender, string e)
@@ -53,6 +53,13 @@ namespace WinFormPluginFrameworkTest
                 ReadLength = 50,
                 DatasType = DataType.Int32,
             };
+            var vigor = new ReadDataModel()
+            {
+                DeviceName = "VSM_1",
+                Address = "D0",
+                ReadLength = 1024,
+                DatasType = DataType.Int16,
+            };
             Task.Run(async () =>
             {
                 while (true)
@@ -64,7 +71,7 @@ namespace WinFormPluginFrameworkTest
                         Debug.WriteLine(result.Message);
                     }));
                     */
-                    var mcResult = pfc.GetData(mbus);
+                    var mcResult = await pfc.GetData(vigor);
                     this.BeginInvoke(new Action(() =>
                     {
                         if (mcResult.IsOk)
@@ -73,21 +80,11 @@ namespace WinFormPluginFrameworkTest
                             Debug.WriteLine(mcResult.Message);
                         }
                     }));
-                    await Task.Delay(1000);
+                    await Task.Delay(1);
                 }
             });
         }
-        /// <summary>
-        /// Tag讀取
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void button4_Click(object sender, EventArgs e)
-        {
-            //直接指定要讀取的Tag點
-            
-        }
-        private int count = 9999999;
+        private Int16 count = 0;
         /// <summary>
         /// 寫入
         /// </summary>
@@ -95,22 +92,38 @@ namespace WinFormPluginFrameworkTest
         /// <param name="e"></param>
         private void button3_Click(object sender, EventArgs e)
         {
-            var test = new WriteDataModel()
+            Task.Run(async () =>
             {
-                DeviceName = "Keyence8500_1",
-                Address = "DM0",
-                Datas = new object[] { count++, count, count, count, count, count, count, count, },
-                DatasType = DataType.Int32,
-            };
-            var mbus = new WriteDataModel()
-            {
-                DeviceName = "MBUS_1",
-                Address = "0",
-                Datas = new object[] { count++, count, count, count, count, count, count, count, },
-                DatasType = DataType.Int32,
-            };
-            var result = pfc.SetData(mbus);
-            richTextBox1.AppendText(result.DeviceName + " # " + result.Message + " | " + mbus.ToString() + "\r\n");
+                var test = new WriteDataModel()
+                {
+                    DeviceName = "Keyence8500_1",
+                    Address = "DM0",
+                    Datas = new object[] { count, count, count, count, count, count, count, count, },
+                    DatasType = DataType.Int32,
+                };
+                var mbus = new WriteDataModel()
+                {
+                    DeviceName = "MBUS_1",
+                    Address = "0",
+                    Datas = new object[] { count, count, count, count, count, count, count, count, },
+                    DatasType = DataType.Int32,
+                };
+                var vigor = new WriteDataModel()
+                {
+                    DeviceName = "VSM_1",
+                    Address = "D0",
+                    Datas = new object[] { 0, count, count, count, count, count, count, count, },
+                    DatasType = DataType.Int16,
+                };
+                count++;
+                var result = await pfc.SetData(vigor);
+
+                this.BeginInvoke(new Action(delegate {
+                    richTextBox1.AppendText(result.DeviceName + " # " + result.Message + " | " + mbus.ToString() + "\r\n");
+                }));
+                
+            });
+            
         }
         /// <summary>
         /// 清除
@@ -138,8 +151,20 @@ namespace WinFormPluginFrameworkTest
                 richTextBox1.ScrollToCaret();
             }
         }
+
         #endregion
 
-        
+        private async void button4_Click(object sender, EventArgs e)
+        {
+            //var result = await pfc.GetTag("統亞1F-1", "電流");
+            var result = await pfc.GetTagGroup("統亞1F-1", "基礎數據");
+            
+            
+            Console.WriteLine(result.Message);
+            this.BeginInvoke(new Action(delegate {
+                richTextBox1.AppendText(result.DeviceName + " # " + result.Message + " | " + result.ToString() + "\r\n");
+            }));
+
+        }
     }
 }

@@ -11,7 +11,11 @@ namespace PFC
         void Connect();
         void Connect(string ip_port);
         OperationModel Send(string cmd);
-        OperationModel GetData(ReadDataModel model);
-        OperationModel SetData(WriteDataModel model);
+        Task<OperationModel> GetData(ReadDataModel model);
+        Task<OperationModel> SetData(WriteDataModel model);
+        Task<OperationModel> GetTag(string deviceName, string tagName);
+        Task<OperationTagGroupModel> GetTagGroup(string deviceName, string groupName);
+        Task<OperationModel> GetMachins();
+
     }
 }

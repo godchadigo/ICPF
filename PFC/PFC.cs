@@ -23,7 +23,7 @@ namespace PFC
         }
         private bool isConnected = false;
         private bool ReceviceFlag = false;
-        private QJDataArray ReceviceBuffer;
+        private string ReceviceBufferString;
         private string mes;
         private IWaitingClient<TcpClient> waitClient;
         public event EventHandler<string> CommunicationStatusEvent;
@@ -62,8 +62,16 @@ namespace PFC
                     Debug.WriteLine($"接收到信息：{mes}");
                     try
                     {
+                        
                         ReceviceFlag = true;
-                        ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(mes);                        
+                        if (mes.Length != 0)
+                        {
+                            ReceviceBufferString = mes;
+                        }
+                        else
+                        {
+                            ReceviceFlag = false;
+                        }                            
                     }
                     catch (Exception ex)
                     {
@@ -157,14 +165,54 @@ namespace PFC
             }            
         }
         //QJDataArray
-        public OperationModel GetData(ReadDataModel model)
+        public async Task<OperationModel> GetData(ReadDataModel model)
         {
             try
             {
                 if (isConnected)
                 {
-                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model , Newtonsoft.Json.Formatting.None);
-                    
+                    BaseDataModel readModel = new BaseDataModel();
+                    readModel.Uuid = Guid.NewGuid().ToString();
+                    readModel.Address = model.Address;
+                    readModel.DeviceName = model.DeviceName;
+                    readModel.iRWDataOperation = IRWDataOperation.Read;
+                                        
+                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model, Newtonsoft.Json.Formatting.None);
+                    await tcpClient.SendAsync(jsonStr);
+
+                    // 創建一個 Stopwatch
+                    Stopwatch stopwatch = new Stopwatch();
+
+                    // 開始計時
+                    stopwatch.Start();
+
+                    while (true)
+                    {
+                        // 如果經過的時間超過了你設定的超時時間（例如5秒），則退出循環
+                        if (stopwatch.ElapsedMilliseconds > 1000) // 5000毫秒 = 5秒
+                        {
+                            break;
+                        }
+
+                        if (ReceviceBufferString == null) continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(ReceviceBufferString);
+                        if (ReceviceBuffer.Uuid == model.Uuid)
+                        {
+                            if (ReceviceBuffer.Data == null) continue;
+                            if (ReceviceBuffer.Data.Length != model.ReadLength)
+                            {
+                                return new OperationModel() { IsOk = false, DeviceName = ReceviceBuffer.DeviceName, Message = "讀取設備端的數據異常(設備端讀出的長度與使用者設定的不一致)", Data = (QJDataArray)ReceviceBuffer };
+                            }
+                            else
+                            {
+                                return new OperationModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = (QJDataArray)ReceviceBuffer };
+                            }
+                        }
+                            
+                    }
+
+                    return new OperationModel() { IsOk = false , Message = "接收超時!"};
+                    /*
                     //调用GetWaitingClient获取到IWaitingClient的对象。
                     waitClient = tcpClient.GetWaitingClient(new WaitingOptions()
                     {
@@ -180,6 +228,7 @@ namespace PFC
                     return new OperationModel() { IsOk = data.IsOk, DeviceName = data.DeviceName, Message = data.Message , Data = data };
                     
                     //return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
+                    */
                 }
                 else
                 {
@@ -192,15 +241,43 @@ namespace PFC
             }
         }
        
-
-
-        public OperationModel SetData(WriteDataModel model)
+        public async Task<OperationModel> SetData(WriteDataModel model)
         {
             try
             {
                 if (isConnected)
                 {
+                    BaseDataModel writeModel = new BaseDataModel();
+                    writeModel.Uuid = Guid.NewGuid().ToString();
+                    writeModel.Address = model.Address;
+                    writeModel.DeviceName = model.DeviceName;
+                    writeModel.iRWDataOperation = IRWDataOperation.Read;
+                    
                     var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model, Newtonsoft.Json.Formatting.None);
+                    await tcpClient.SendAsync(jsonStr);
+
+                    // 創建一個 Stopwatch
+                    Stopwatch stopwatch = new Stopwatch();
+
+                    // 開始計時
+                    stopwatch.Start();
+
+                    while (true)
+                    {
+                        // 如果經過的時間超過了你設定的超時時間（例如5秒），則退出循環
+                        if (stopwatch.ElapsedMilliseconds > 50) // 5000毫秒 = 5秒
+                        {
+                            break;
+                        }
+                        if (ReceviceBufferString == null) continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(ReceviceBufferString);
+                        if (ReceviceBuffer.Uuid == model.Uuid)
+                            return new OperationModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = (QJDataArray)ReceviceBuffer };
+                    }
+
+                    return new OperationModel() { IsOk = false, Message = "接收超時!" };
+
+                    /*
                     //调用GetWaitingClient获取到IWaitingClient的对象。
                     waitClient = tcpClient.GetWaitingClient(new WaitingOptions()
                     {
@@ -214,7 +291,7 @@ namespace PFC
                     //tcpClient.Logger.Info($"收到回应消息：{Encoding.UTF8.GetString(returnData)}");                    
                     var data = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(Encoding.UTF8.GetString(returnData));
                     return new OperationModel() { IsOk = true, DeviceName = data.DeviceName, Message = data.Message, Data = new QJDataArray() { Data = model.Datas} };
-
+                    */
                 }
                 else
                 {
@@ -225,7 +302,163 @@ namespace PFC
             {
                 return new OperationModel() { IsOk = false, Message = ex.Message };
             }
-        }        
+        }
+
+        public async Task<OperationModel> GetTag(string deviceName, string tagName)
+        {
+            try
+            {
+                if (isConnected)
+                {
+                    BaseDataModel readModel = new BaseDataModel();
+                    readModel.Uuid = Guid.NewGuid().ToString();
+                    readModel.Address = tagName;
+                    readModel.DeviceName = deviceName;
+                    readModel.iRWDataOperation = IRWDataOperation.Command;
+                    readModel.iRWCommand = IRWDataCommand.GetTagName;
+
+                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(readModel, Newtonsoft.Json.Formatting.None);
+                    await tcpClient.SendAsync(jsonStr);
+
+                    // 創建一個 Stopwatch
+                    Stopwatch stopwatch = new Stopwatch();
+
+                    // 開始計時
+                    stopwatch.Start();
+
+                    while (true)
+                    {
+                        // 如果經過的時間超過了你設定的超時時間（例如5秒），則退出循環
+                        if (stopwatch.ElapsedMilliseconds > 1000) // 5000毫秒 = 5秒
+                        {
+                            break;
+                        }
+
+                        if (ReceviceBufferString == null) continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(ReceviceBufferString);
+                        if (ReceviceBuffer.Uuid == readModel.Uuid)
+                        {
+                            if (ReceviceBuffer.Data == null) continue;
+                            return new OperationModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = (QJDataArray)ReceviceBuffer };
+                        }
+                    }
+
+                    return new OperationModel() { IsOk = false, Message = "接收超時!" };
+                  
+                }
+                else
+                {
+                    return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new OperationModel() { IsOk = false, Message = ex.Message };
+            }
+        }
+        public async Task<OperationTagGroupModel> GetTagGroup(string deviceName, string groupName)
+        {
+            try
+            {
+                if (isConnected)
+                {
+                    BaseDataModel readModel = new BaseDataModel();
+                    readModel.Uuid = Guid.NewGuid().ToString();
+                    readModel.Address = groupName;
+                    readModel.DeviceName = deviceName;
+                    readModel.iRWDataOperation = IRWDataOperation.Command;
+                    readModel.iRWCommand = IRWDataCommand.GetTagGroup;
+
+                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(readModel, Newtonsoft.Json.Formatting.None);
+                    await tcpClient.SendAsync(jsonStr);
+
+                    // 創建一個 Stopwatch
+                    Stopwatch stopwatch = new Stopwatch();
+
+                    // 開始計時
+                    stopwatch.Start();
+
+                    while (true)
+                    {
+                        // 如果經過的時間超過了你設定的超時時間（例如5秒），則退出循環
+                        if (stopwatch.ElapsedMilliseconds > 1000) // 5000毫秒 = 5秒
+                        {
+                            break;
+                        }
+
+                        if (ReceviceBufferString == null) continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJTagGroupDataArray>(ReceviceBufferString);
+                        if (ReceviceBuffer.Uuid == readModel.Uuid)
+                        {                     
+                            
+                            return new OperationTagGroupModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = ReceviceBuffer };                            
+                        }
+                    }
+
+                    return new OperationTagGroupModel() { IsOk = false, Message = "接收超時!" };
+
+                }
+                else
+                {
+                    return new OperationTagGroupModel() { IsOk = false, Message = "通訊失敗!" };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new OperationTagGroupModel() { IsOk = false, Message = ex.Message };
+            }
+        }
+
+        public async Task<OperationModel> GetMachins()
+        {
+            try
+            {
+                if (isConnected)
+                {
+                    BaseDataModel model = new BaseDataModel();
+                    model.Uuid = Guid.NewGuid().ToString();
+                    model.iRWDataOperation = IRWDataOperation.Command;
+                    model.iRWCommand = IRWDataCommand.GetMacines;
+
+                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model, Newtonsoft.Json.Formatting.None);
+                    await tcpClient.SendAsync(jsonStr);
+
+                    // 創建一個 Stopwatch
+                    Stopwatch stopwatch = new Stopwatch();
+
+                    // 開始計時
+                    stopwatch.Start();
+
+                    while (true)
+                    {
+                        // 如果經過的時間超過了你設定的超時時間（例如5秒），則退出循環
+                        if (stopwatch.ElapsedMilliseconds > 200) // 5000毫秒 = 5秒
+                        {
+                            break;
+                        }
+                        if (ReceviceBufferString == null) continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(ReceviceBufferString);
+                        if (ReceviceBuffer.Uuid == model.Uuid)
+                            return new OperationModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = (QJDataArray)ReceviceBuffer };
+                    }
+
+                    return new OperationModel() { IsOk = false, Message = "接收超時!" };                    
+                }
+                else
+                {
+                    return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new OperationModel() { IsOk = false, Message = ex.Message };
+            }
+        }
+        public OperationModel AddController(string  deviceName , int commInterface , int CommProtocol , string ip , int port)
+        {
+
+            return new OperationModel() { IsOk = false };
+        }
     }
 
     #region QJProtocol
@@ -262,13 +495,45 @@ namespace PFC
             return $"請求結果 : {IsOk} ， 數據 : {Data}";
         }
     }
+
+    public class OperationTagModel
+    {
+        public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public string Message { get; set; }
+        public QJTagDataArray Data { get; set; }
+        public override string ToString()
+        {
+            return $"請求結果 : {IsOk} ， 數據 : {Data}";
+        }
+    }
+    public class OperationTagGroupModel
+    {
+        public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public string Message { get; set; }
+        public QJTagGroupDataArray Data { get; set; }
+        public override string ToString()
+        {
+            return $"請求結果 : {IsOk} ， 數據 : {Data}";
+        }
+    }
+
     public enum IRWDataOperation
     {
         Read = 1,
-        Write = 2
+        Write = 2,
+        Command = 3,
+    }
+    public enum IRWDataCommand
+    {
+        GetMacines = 1,
+        GetTagName = 2,
+        GetTagGroup = 3,
     }
     public interface IRWData
     {
+        string Uuid { get; set; }
         /// <summary>
         /// 設備名稱
         /// 使用者需要指定定義好的設備
@@ -284,13 +549,16 @@ namespace PFC
     }
     public class BaseDataModel : IRWData
     {
+        public string Uuid { get; set; }
         public string DeviceName { get; set; }
         public string Address { get; set; }
         public IRWDataOperation iRWDataOperation { get; set; }
+        public IRWDataCommand iRWCommand { get; set; }
 
     }
     public class ReadDataModel : IRWData
     {
+        public string Uuid { get; set; }
         public string DeviceName { get; set; }
         public string Address { get; set; }
         public ushort ReadLength { get; set; }
@@ -300,6 +568,7 @@ namespace PFC
     }
     public class WriteDataModel : IRWData
     {
+        public string Uuid { get; set; }
         public string DeviceName { get; set; }
         public string Address { get; set; }
         public object[] Datas { get; set; }
@@ -349,8 +618,17 @@ namespace PFC
         public DataType DataType { get; set; }
         public string Message { get; set; }
     }
-    public class QJDataArray
+    public interface IQJData
     {
+        public string Uuid { get; set; }
+        public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public object[] Data { get; set; }
+        public string Message { get; set; }
+    }
+    public class QJDataArray:IQJData
+    {
+        public string Uuid { get; set; }
         public bool IsOk { get; set; }
         public string DeviceName { get; set; }
         public object[] Data { get; set; }
@@ -374,6 +652,15 @@ namespace PFC
             
             return (strRes);
         }
+    }
+    public class QJTagDataArray : QJDataArray , IQJData
+    {
+        public string TagName { get; set; }
+    }
+    public class QJTagGroupDataArray : QJDataArray , IQJData
+    {
+        public string TagName { get; set; }
+        public Dictionary<string, QJDataArray> TagData { get; set; }
     }
     public class QJDataList
     {

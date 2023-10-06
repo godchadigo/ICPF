@@ -13,6 +13,7 @@ namespace PluginA
             Core.ForTest();
             Console.WriteLine(PluginName + " Loading...");
             
+            /*
             CancellationToken token = cts.Token;
             Task.Run(async () => {
                 while (!token.IsCancellationRequested)
@@ -30,7 +31,7 @@ namespace PluginA
                     await Task.Delay(1000);
                 }
             } , cts.Token );
-
+            */
         }
         public override void onCloseing()
         {
