@@ -45,6 +45,10 @@ namespace ICPFCore
         {
             return await Core.GetTag(deviceName, tagName);
         }
+        public virtual async Task<QJDataArray> GetTagList(string deviceName)
+        {
+            return await Core.GetTagList(deviceName);
+        }
         public virtual async Task<QJDataArray> GetMachins()
         {
             return await Core.GetMachins();
@@ -63,6 +67,7 @@ namespace ICPFCore
         GetMacines = 1,
         GetTagName = 2,
         GetTagGroup = 3,
+        GetContainer = 4,
     }
     public interface IRWData
     {
@@ -713,139 +718,141 @@ namespace ICPFCore
         /// <returns>通訊讀取完成結果以及陣列數據和狀態</returns>
         public async Task<QJDataArray> GetData(ReadDataModel model) 
         {
-            QJDataArray rData = new QJDataArray();
-            rData.Uuid = model.Uuid;
-            rData.IsOk = false;
-            //判定設備有在列表內
-            if (NetDeviceList.TryGetValue(model.DeviceName, out NetworkDeviceBase pack))
+            return await Task.Run(async() =>
             {
-                //解析指令包
-                switch (model.DatasType)
-                {
-                    case DataType.Bool:
-                        var bool16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
-                        if (bool16Res.IsSuccess)
-                        {
-                            rData.Data = bool16Res.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(bool16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = bool16Res.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    case DataType.Int16:
-                        var int16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
-                        if (int16Res.IsSuccess)
-                        {
-                            rData.Data = int16Res.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(int16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = int16Res.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    case DataType.UInt16:
-                        var uint16Res = await pack.ReadUInt16Async(model.Address, model.ReadLength);
-                        if (uint16Res.IsSuccess)
-                        {
-                            rData.Data = uint16Res.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(uint16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = uint16Res.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-           
-                    case DataType.Int32:
-                        var int32Res = await pack.ReadInt32Async(model.Address, model.ReadLength);
-                        if (int32Res.IsSuccess)
-                        {
-                            rData.Data = int32Res.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(int32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = int32Res.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    case DataType.UInt32:
-                        var uint32Res = await pack.ReadUInt32Async(model.Address, model.ReadLength);
-                        if (uint32Res.IsSuccess)
-                        {
-                            rData.Data = uint32Res.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(uint32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = uint32Res.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    case DataType.Int64:
-                        var int64Res = await pack.ReadInt64Async(model.Address, model.ReadLength);
-                        if (int64Res.IsSuccess)
-                        {
-                            rData.Data = int64Res.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(int64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = int64Res.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    case DataType.UInt64:
-                        var uint64Res = await pack.ReadUInt64Async(model.Address, model.ReadLength);
-                        if (uint64Res.IsSuccess)
-                        {
-                            rData.Data = uint64Res.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(uint64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = uint64Res.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    case DataType.Float:
-                        var floatRes = await pack.ReadFloatAsync(model.Address, model.ReadLength);
-                        if (floatRes.IsSuccess)
-                        {
-                            rData.Data = floatRes.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(floatRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = floatRes.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    case DataType.Double:
-                        var doubleRes = await pack.ReadDoubleAsync(model.Address, model.ReadLength);
-                        if (doubleRes.IsSuccess)
-                        {
-                            rData.Data = doubleRes.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(doubleRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = doubleRes.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    case DataType.String:
-                        var stringRes = await pack.ReadStringAsync(model.Address, model.ReadLength);
-                        if (stringRes.IsSuccess)
-                        {
-                            rData.Data = stringRes.Content.Select(x => (object)x).ToArray();
-                        }
-                        rData.Message = ChineseConverter.Convert(stringRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
-                        rData.IsOk = stringRes.IsSuccess;
-                        rData.DataType = model.DatasType;
-                        rData.DeviceName = model.DeviceName;
-                        break;
-                    default:
-                        // 適當的錯誤處理
-                        break;
-                }
-
-            }
-            else
-            {
+                QJDataArray rData = new QJDataArray();
+                rData.Uuid = model.Uuid;
                 rData.IsOk = false;
-                rData.Message = "找不到指定的設備";
-            }
-            return rData;
+                //判定設備有在列表內
+                if (NetDeviceList.TryGetValue(model.DeviceName, out NetworkDeviceBase pack))
+                {
+                    //解析指令包
+                    switch (model.DatasType)
+                    {
+                        case DataType.Bool:
+                            var bool16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
+                            if (bool16Res.IsSuccess)
+                            {
+                                rData.Data = bool16Res.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(bool16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = bool16Res.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.Int16:
+                            var int16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
+                            if (int16Res.IsSuccess)
+                            {
+                                rData.Data = int16Res.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(int16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = int16Res.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.UInt16:
+                            var uint16Res = await pack.ReadUInt16Async(model.Address, model.ReadLength);
+                            if (uint16Res.IsSuccess)
+                            {
+                                rData.Data = uint16Res.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(uint16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = uint16Res.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
 
+                        case DataType.Int32:
+                            var int32Res = await pack.ReadInt32Async(model.Address, model.ReadLength);
+                            if (int32Res.IsSuccess)
+                            {
+                                rData.Data = int32Res.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(int32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = int32Res.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.UInt32:
+                            var uint32Res = await pack.ReadUInt32Async(model.Address, model.ReadLength);
+                            if (uint32Res.IsSuccess)
+                            {
+                                rData.Data = uint32Res.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(uint32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = uint32Res.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.Int64:
+                            var int64Res = await pack.ReadInt64Async(model.Address, model.ReadLength);
+                            if (int64Res.IsSuccess)
+                            {
+                                rData.Data = int64Res.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(int64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = int64Res.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.UInt64:
+                            var uint64Res = await pack.ReadUInt64Async(model.Address, model.ReadLength);
+                            if (uint64Res.IsSuccess)
+                            {
+                                rData.Data = uint64Res.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(uint64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = uint64Res.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.Float:
+                            var floatRes = await pack.ReadFloatAsync(model.Address, model.ReadLength);
+                            if (floatRes.IsSuccess)
+                            {
+                                rData.Data = floatRes.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(floatRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = floatRes.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.Double:
+                            var doubleRes = await pack.ReadDoubleAsync(model.Address, model.ReadLength);
+                            if (doubleRes.IsSuccess)
+                            {
+                                rData.Data = doubleRes.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(doubleRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = doubleRes.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.String:
+                            var stringRes = await pack.ReadStringAsync(model.Address, model.ReadLength);
+                            if (stringRes.IsSuccess)
+                            {
+                                rData.Data = stringRes.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(stringRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = stringRes.IsSuccess;
+                            rData.DataType = model.DatasType;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        default:
+                            // 適當的錯誤處理
+                            break;
+                    }
+
+                }
+                else
+                {
+                    rData.IsOk = false;
+                    rData.Message = "找不到指定的設備";
+                }
+                return rData;
+            });            
         }
         /// <summary>
         /// 提供寫入模組，執行寫入指令
@@ -949,6 +956,26 @@ namespace ICPFCore
             }
             return rData;
         }
+        public async Task<QJDataArray> GetTagList(string deviceName)
+        {
+            QJDataArray rData = new QJDataArray();
+            rData.IsOk = false;
+            rData.Uuid = Guid.NewGuid().ToString();
+            if (ConfigList.TryGetValue(deviceName, out IDeviceConfig model))
+            {
+                rData.IsOk = true;
+                rData.Data = model.TagList.ToArray();
+                return rData;
+            }
+            else
+            {
+                rData.IsOk = false;
+                rData.Message = "找不到指定的設備!";
+                return rData;
+            }
+            rData.Message = "錯誤，請勿隨意注入惡意程式!!";
+            return rData;
+        }
         public async Task<QJTagGroupDataArray> GetTagGroup(string deviceName, string groupName)
         {
             //Dictionary<string, QJDataArray> tagData = new Dictionary<string, QJDataArray>();
@@ -1042,9 +1069,9 @@ namespace ICPFCore
         /// 獲取當前配置黨載入的設備
         /// </summary>
         /// <returns></returns>
-        public async Task<QJTagDataArray> GetMachins()
+        public async Task<QJDataArray> GetMachins()
         {
-            QJTagDataArray result = new QJTagDataArray();
+            QJDataArray result = new QJDataArray();
             result.DataType = DataType.String;
 
             result.Data = new string[NetDeviceList.Count];

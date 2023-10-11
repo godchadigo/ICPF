@@ -15,6 +15,7 @@ namespace PFC
         Task<OperationModel> SetData(WriteDataModel model);
         Task<OperationModel> GetTag(string deviceName, string tagName);
         Task<OperationTagGroupModel> GetTagGroup(string deviceName, string groupName);
+        Task<OperationModel<ContainerModelPacket>> GetContainer();
         Task<OperationModel> GetMachins();
 
     }

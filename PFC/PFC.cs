@@ -15,11 +15,13 @@ namespace PFC
         public void Connect()
         {           
             ConnectWithRetry();
+            //ContainerLoop();
         }
         public void Connect(string ip_port)
         {
             IpAddressPort = ip_port;
             ConnectWithRetry();
+            //ContainerLoop();
         }
         private bool isConnected = false;
         private bool ReceviceFlag = false;
@@ -388,15 +390,12 @@ namespace PFC
 
                         if (ReceviceBufferString == null) continue;
                         var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJTagGroupDataArray>(ReceviceBufferString);
-                        if (ReceviceBuffer.Uuid == readModel.Uuid)
-                        {                     
-                            
+                        if (ReceviceBuffer?.Uuid == readModel.Uuid)
+                        {                                                 
                             return new OperationTagGroupModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = ReceviceBuffer };                            
                         }
                     }
-
                     return new OperationTagGroupModel() { IsOk = false, Message = "接收超時!" };
-
                 }
                 else
                 {
@@ -454,10 +453,68 @@ namespace PFC
                 return new OperationModel() { IsOk = false, Message = ex.Message };
             }
         }
+        public async Task<OperationModel<ContainerModelPacket>> GetContainer()
+        {
+            try
+            {
+                if (isConnected)
+                {
+                    BaseDataModel model = new BaseDataModel();
+                    model.Uuid = Guid.NewGuid().ToString();
+                    model.iRWDataOperation = IRWDataOperation.Command;
+                    model.iRWCommand = IRWDataCommand.GetContainer;
+
+                    Console.WriteLine("GetContainer: " + model.Uuid);
+                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model, Newtonsoft.Json.Formatting.None);
+                    await tcpClient.SendAsync(jsonStr);
+
+                    // 創建一個 Stopwatch
+                    Stopwatch stopwatch = new Stopwatch();
+
+                    // 開始計時
+                    stopwatch.Start();
+
+                    while (true)
+                    {
+                        // 如果經過的時間超過了你設定的超時時間（例如5秒），則退出循環
+                        if (stopwatch.ElapsedMilliseconds > 10000) // 5000毫秒 = 5秒
+                        {
+                            break;
+                        }
+                        if (ReceviceBufferString == null) continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<ContainerModelPacket>(ReceviceBufferString);
+                        if (ReceviceBuffer.Uuid == model.Uuid)
+                            return new OperationModel<ContainerModelPacket>() { IsOk = true, DeviceName = "", Message = "成功獲取內容物!", Data = ReceviceBuffer };
+                    }
+
+                    return new OperationModel<ContainerModelPacket>() { IsOk = false, Message = "接收超時!" };
+                }
+                else
+                {
+                    return new OperationModel<ContainerModelPacket>() { IsOk = false, Message = "通訊失敗!" };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new OperationModel<ContainerModelPacket>() { IsOk = false, Message = ex.Message };
+            }
+        }
         public OperationModel AddController(string  deviceName , int commInterface , int CommProtocol , string ip , int port)
         {
 
             return new OperationModel() { IsOk = false };
+        }
+        private void ContainerLoop()
+        {
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    var machins = await GetContainer();
+                    
+                    Thread.Sleep(1000);
+                }                
+            });            
         }
     }
 
@@ -495,6 +552,19 @@ namespace PFC
             return $"請求結果 : {IsOk} ， 數據 : {Data}";
         }
     }
+    public class OperationModel<T>
+    {
+        public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public string Message { get; set; }
+        public T Data { get; set; }
+
+        public override string ToString()
+        {
+            return $"請求結果 : {IsOk} ， 數據 : {Data}";
+        }
+    }
+
 
     public class OperationTagModel
     {
@@ -518,6 +588,29 @@ namespace PFC
             return $"請求結果 : {IsOk} ， 數據 : {Data}";
         }
     }
+    public class ContainerModel
+    {
+        public string Uuid { get; set; }
+        public string DeviceName { get; set; }
+        public string TagGroup { get; set; }
+        public string TagName { get; set; }
+        public QJDataArray Data { get; set; }
+
+    }
+    public class ContainerModelPacket
+    {
+        public string Uuid { get; set; }
+        public List<ContainerModel> Container { get; set; }
+    }
+    public class Tag
+    {
+        public string GroupName { get; set; }
+        public string TagName { get; set; }
+        public bool IsOk { get; set; } = false;
+        public string Address { get; set; }
+        public DataType DataType { get; set; }
+        public ushort Length { get; } = 1;
+    }
 
     public enum IRWDataOperation
     {
@@ -530,6 +623,7 @@ namespace PFC
         GetMacines = 1,
         GetTagName = 2,
         GetTagGroup = 3,
+        GetContainer = 4,
     }
     public interface IRWData
     {

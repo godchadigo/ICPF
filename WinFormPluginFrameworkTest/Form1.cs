@@ -166,5 +166,30 @@ namespace WinFormPluginFrameworkTest
             }));
 
         }
+
+        private async void button5_Click(object sender, EventArgs e)
+        {
+            await Task.Run(async() =>
+            {
+                var result = await pfc.GetContainer();
+                if (!result.IsOk) return;
+                this.BeginInvoke(new Action(delegate {
+                    foreach (var tag in result.Data.Container)
+                    {
+                        if (tag.Data.IsOk)
+                        {
+                            richTextBox1.AppendText(" # " + result.Message + " | " + tag.Data.DeviceName + tag.TagGroup + " " + tag.TagName + " " + tag.Data.Data[0] + "\r\n");
+                        }
+                        else
+                        {
+                            //richTextBox1.AppendText(" # " + result.Message + " | " + tag.Data.DeviceName + tag.Data.Message + "\r\n");
+                        }
+
+                    }
+
+                }));
+            });
+            
+        }
     }
 }

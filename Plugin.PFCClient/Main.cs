@@ -7,29 +7,31 @@ using TouchSocket.Rpc.WebApi;
 using TouchSocket.Sockets;
 using ICPFCore;
 using System.Collections.Concurrent;
+using System.Linq;
+using Plugin.PFCClient.Model;
 
 namespace PluginPFCClient
 {
     public class Main : ICPFCore.PluginBase
     {
         public override string PluginName { get; set; } = "PFC_Plugin";
-        
+
         private TcpService service = new TcpService();
         private CancellationTokenSource cts = new CancellationTokenSource();
         Thread t1;
         Thread t2;
-        
+
         private ConcurrentQueue<IRWData> dataPacketList = new ConcurrentQueue<IRWData>();
-        
+
         private SocketClient sc;
-        
+
         public override void onLoading()
         {
             base.onLoading();
-            
+            Loop();
             t1 = new Thread(() =>
             {
-                
+
                 service.Connecting = (client, e) => { };//有客户端正在連接
                 service.Connected = (client, e) => {
                     client.Logger.Info(client.ID + "加入了會議!");
@@ -58,7 +60,14 @@ namespace PluginPFCClient
                             var readModel = Newtonsoft.Json.JsonConvert.DeserializeObject<ReadDataModel>(mes);
                             var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(readModel);
                             client.Logger.Info("read: " + jsonStr);
-                            dataPacketList.Enqueue(readModel);
+                            //dataPacketList.Enqueue(readModel);
+                            var result = new BaseDataModel();
+
+                            var a = await GetData(readModel);
+                            Console.WriteLine("a" + a.DeviceName + a.IsOk + a.Data.Length + a.Message + a.Uuid);
+                            var jsonStra = Newtonsoft.Json.JsonConvert.SerializeObject(a);
+                            await sc.SendAsync(jsonStra);
+
 
                         }
 
@@ -66,7 +75,11 @@ namespace PluginPFCClient
                         {
 
                             var writeModel = Newtonsoft.Json.JsonConvert.DeserializeObject<WriteDataModel>(mes);
-                            dataPacketList.Enqueue(writeModel);
+                            //dataPacketList.Enqueue(writeModel);
+                            var b = await SetData(writeModel);
+                            Console.WriteLine("b" + b.Message + b.Uuid);
+                            var jsonStrb = Newtonsoft.Json.JsonConvert.SerializeObject(b);
+                            await sc.SendAsync(jsonStrb);
 
                         }
 
@@ -83,7 +96,7 @@ namespace PluginPFCClient
 
                             if (packRes.iRWCommand == IRWDataCommand.GetTagName)
                             {
-                                var machinResult = await Core.GetTag(packRes.DeviceName , packRes.Address);
+                                var machinResult = await Core.GetTag(packRes.DeviceName, packRes.Address);
                                 machinResult.Uuid = packRes.Uuid;
                                 var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(machinResult);
                                 Console.WriteLine("GetTag " + jsonStr);
@@ -98,10 +111,25 @@ namespace PluginPFCClient
                                 Console.WriteLine("GetTagGroup " + jsonStr);
                                 await sc.SendAsync(jsonStr);
                             }
+
+                            if (packRes.iRWCommand == IRWDataCommand.GetContainer)
+                            {
+                                lock (locker)
+                                {
+                                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(new ContainerModelPacket()
+                                    {
+                                        Uuid = packRes.Uuid,
+                                        Container = ContainerBuffer,
+                                    });
+                                    Console.WriteLine("GetContainer " + jsonStr);
+                                    sc.Send(jsonStr);
+                                }
+                                
+                            }
                         }
                     }
-                    catch(Exception ex) { }
-                                                                     
+                    catch (Exception ex) { }
+
                 };
                 //Console.WriteLine("------------");
                 service.Setup(new TouchSocketConfig()//载入配置     
@@ -112,16 +140,16 @@ namespace PluginPFCClient
                     })
                     .ConfigurePlugins(a =>
                     {
-                        
+
                     })
                     .SetDataHandlingAdapter(() => { return new TerminatorPackageAdapter("\r\n"); }))//配置终止字符適配器，以\r\n结尾。                                    
                     .Start();//启动                
-                
+
             });
             t1.IsBackground = true;
             t1.Start();
 
-            t2 = new Thread(async() => {
+            t2 = new Thread(async () => {
                 while (true)
                 {
                     if (dataPacketList.TryDequeue(out IRWData model))
@@ -130,7 +158,7 @@ namespace PluginPFCClient
                         if (model == null) continue;
                         if (model is ReadDataModel readModel)
                         {
-                            var a = await GetData(readModel);                            
+                            var a = await GetData(readModel);
                             Console.WriteLine("a" + a.DeviceName + a.IsOk + a.Data.Length + a.Message + a.Uuid);
                             var jsonStra = Newtonsoft.Json.JsonConvert.SerializeObject(a);
                             await sc.SendAsync(jsonStra);
@@ -147,17 +175,91 @@ namespace PluginPFCClient
                 }
             });
             t2.IsBackground = true;
-            t2.Start();
-          
+            //t2.Start();
+
         }
         public override void onCloseing()
-        {            
+        {
             service.Stop();
             service.Dispose();
-            service = null;            
+            service = null;
             t1.Interrupt();
             t1 = null;
             base.onCloseing();
-        }        
+        }
+        private List<ContainerModel> ContainerBuffer = new List<ContainerModel>();
+        private readonly object locker = new object();
+        private void Loop()
+        {
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    QJDataArray model = new QJDataArray();
+                    var machinsResult = await Core.GetMachins();
+                    //Parallel.ForEach(machinsResult.Data , _machinName => { 
+                    foreach (string machinName in machinsResult.Data)
+                    {
+
+                        //string machinName = (string)_machinName;
+                        var tagsGroup = await Core.GetTagList(machinName);
+                        foreach (var _tags in tagsGroup.Data)
+                        {
+
+                            Tag tags = (Tag)_tags;
+                            ReadDataModel readModel = new ReadDataModel()
+                            {
+                                DeviceName = machinName,
+                                Address = tags.Address,
+                                DatasType = tags.DataType,
+                                ReadLength = tags.Length,
+                            };
+
+                            Task.Factory.StartNew(async() =>
+                            {
+                                var result = await GetData(readModel);
+                                if (result == null) return;
+
+                                lock (locker)
+                                {
+                                    var tagResult = ContainerBuffer.Where(x => x.DeviceName == machinName && x.TagGroup == tags.GroupName && x.TagName == tags.TagName).FirstOrDefault();
+                                    if (tagResult != null)
+                                    {
+                                        tagResult.Data = result;
+                                    }
+                                    else
+                                    {
+                                        ContainerBuffer.Add(new ContainerModel()
+                                        {
+                                            Uuid = Guid.NewGuid().ToString(),
+                                            DeviceName = machinName,
+                                            TagGroup = tags.GroupName,
+                                            TagName = tags.TagName,
+                                            Data = result,
+                                        });
+                                    }
+                                }
+                            });
+                            
+                        }
+                        //});                        
+                    }
+
+                    foreach (var tag in ContainerBuffer)
+                    {
+                        if (tag.Data.IsOk)
+                        {
+                            Console.WriteLine($"{tag.DeviceName} {tag.TagGroup} {tag.TagName} {tag.Data.Data[0]}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{tag.DeviceName} {tag.TagGroup} {tag.TagName} {tag.Data.Message}");
+                        }
+
+                    }
+                    await Task.Delay(10);
+                }
+            });
+        }
     }
 }
