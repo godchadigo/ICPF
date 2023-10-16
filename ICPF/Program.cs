@@ -556,7 +556,7 @@ namespace ICPFCore
                     foreach (var item in Container)
                     {
                         var data = item;
-                        Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} isOk:{data.IsOk} Address:{data.Address} Data:{item.Data} DataType:{data.DataType} Message:{data.Message}");                        
+                        Console.WriteLine($"Uuid:{data.Uuid} TagName:{data.TagName} DeviceName:{data.DeviceName} isOk:{data.IsOk} Address:{data.Address} Data:{item.Data} DataType:{data.DataType} Message:{data.Message}");                        
                     }                    
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.BackgroundColor = ConsoleColor.Black;
@@ -861,6 +861,7 @@ namespace ICPFCore
             {
                 while (true)
                 {
+                    if (NetDeviceList == null) return;
                     foreach (var item in NetDeviceList)
                     {
                         foreach (var data in item.Value.Container)
@@ -946,6 +947,7 @@ namespace ICPFCore
         {
             return await Task.Run(async () =>
             {
+                if (NetDeviceList == null) return new QJDataArray2() { IsOk = false };
                 QJDataArray2 rData = new QJDataArray2();
                 rData.Uuid = model.Uuid;
                 rData.IsOk = false;
