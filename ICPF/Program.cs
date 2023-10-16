@@ -275,7 +275,8 @@ namespace ICPFCore
         public static event EventHandler<EventArgs> ProgramCreated;        
         private static ConcurrentDictionary<string , DoubleNetworkBase> NetDeviceList = new ConcurrentDictionary<string , DoubleNetworkBase>();
         private static ConcurrentDictionary<string, IDeviceConfig> ConfigList = new ConcurrentDictionary<string, IDeviceConfig>();
-        
+        private static ConcurrentBag<QJTagData> Container = new ConcurrentBag<QJTagData>();
+
         private static Program p;
         private static List<IPlugin> plugins = new List<IPlugin>();
         public static string Test { get; set; } = "test123456";
@@ -350,7 +351,8 @@ namespace ICPFCore
             p = new Program();
 
             CommunicationTask();
-
+            //啟動刷新器
+            GetInstance().ContainerRefresher();
             #region 插件反射載入
 
             //LoadPlugins();
@@ -479,7 +481,7 @@ namespace ICPFCore
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.BackgroundColor = ConsoleColor.Black;
                 }
-                if (input.Equals("getContainer", StringComparison.OrdinalIgnoreCase))
+                if (input.Equals("getDeviceContainer", StringComparison.OrdinalIgnoreCase))
                 {
                     
                     if (iargs.Length == 2)
@@ -546,6 +548,18 @@ namespace ICPFCore
                     {
                         Console.WriteLine("缺少參數!");
                     }
+                }
+                if (input.Equals("getContainer", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    foreach (var item in Container)
+                    {
+                        var data = item;
+                        Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} isOk:{data.IsOk} Address:{data.Address} Data:{item.Data} DataType:{data.DataType} Message:{data.Message}");                        
+                    }                    
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.BackgroundColor = ConsoleColor.Black;
                 }
             }
             #endregion
@@ -836,6 +850,40 @@ namespace ICPFCore
             }
 
 
+        }
+        private void ContainerRefresher()
+        {
+            
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    foreach (var item in NetDeviceList)
+                    {
+                        foreach (var data in item.Value.Container)
+                        {                                                   
+                            // 檢查是否已經存在相同的物件
+                            QJTagData existingData = Container.FirstOrDefault(x => x.Address == data.Value.Address );
+                            if (existingData != null)
+                            {
+                                // 如果存在，更新現有物件
+                                // 這裡假設你有一個方法來更新物件的內容                                
+                                existingData.Data = data.Value.Data;
+                                existingData.Uuid = data.Value.Uuid;
+                                existingData.Message = data.Value.Message;
+                                existingData.DataType = data.Value.DataType;
+                                existingData.DeviceName = data.Value.DeviceName;
+                                existingData.IsOk = data.Value.IsOk;
+                            }
+                            else
+                            {
+                                // 如果不存在，新增物件
+                                Container.Add(data.Value);
+                            }
+                        }
+                    }
+                }
+            });
         }
         private static void EventTask() 
         {

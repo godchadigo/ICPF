@@ -435,10 +435,12 @@ namespace PFC
                     while (true)
                     {
                         // 如果經過的時間超過了你設定的超時時間（例如5秒），則退出循環
-                        if (stopwatch.ElapsedMilliseconds > 200) // 5000毫秒 = 5秒
+                        if (stopwatch.ElapsedMilliseconds > 2000) // 5000毫秒 = 5秒
                         {
                             break;
                         }
+                        
+                        if (ReceviceBufferString == null) continue;
                         if (ReceviceBufferString == "") continue;
                         var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<OperationResult<List<string>>>(ReceviceBufferString);
                         if (ReceviceBuffer.Uuid == model.Uuid)
