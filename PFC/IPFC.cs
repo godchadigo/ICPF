@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,10 +14,10 @@ namespace PFC
         OperationModel Send(string cmd);
         Task<OperationModel> GetData(ReadDataModel model);
         Task<OperationModel> SetData(WriteDataModel model);
-        Task<OperationModel> GetTag(string deviceName, string tagName);
-        Task<OperationTagGroupModel> GetTagGroup(string deviceName, string groupName);
-        Task<OperationModel<ContainerModelPacket>> GetContainer();
-        Task<OperationModel> GetMachins();
+        Task<OperationResult<QJTagData>> GetTag(string deviceName, string tagName);
+        Task<OperationResult<List<QJTagData>>> GetTagGroup(string deviceName, string groupName);
+        Task<OperationResult<ConcurrentDictionary<string, QJTagData>>> GetContainer(string deviceName);
+        Task<OperationResult<List<string>>> GetMachins();
 
     }
 }

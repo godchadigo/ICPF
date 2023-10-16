@@ -2,6 +2,7 @@
 using HslCommunication.Core;
 using HslCommunication.Core.Net;
 using ICPF.Config;
+using ICPF.Model;
 using Microsoft.International.Converters.TraditionalChineseToSimplifiedConverter;
 using Newtonsoft.Json;
 using PluginFramework;
@@ -11,6 +12,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace ICPFCore
@@ -41,7 +43,7 @@ namespace ICPFCore
         {
             return await Core.SetData(model);
         }
-        public virtual async Task<QJTagDataArray> GetTag(string deviceName, string tagName)
+        public virtual async Task<OperationResult<QJTagData>> GetTag(string deviceName, string tagName)
         {
             return await Core.GetTag(deviceName, tagName);
         }
@@ -49,11 +51,16 @@ namespace ICPFCore
         {
             return await Core.GetTagList(deviceName);
         }
-        public virtual async Task<QJDataArray> GetMachins()
+        public virtual async Task<OperationResult<List<string>>> GetMachins()
         {
             return await Core.GetMachins();
         }
-        
+        public virtual async Task<OperationResult<ConcurrentDictionary<string, QJTagData>>> GetDeviceContainer(string deviceName)
+        {
+            return await Core.GetDeviceContainer(deviceName);
+        }
+
+
     }
 
     public enum IRWDataOperation
@@ -132,7 +139,10 @@ namespace ICPFCore
     /// </summary>
     public class QJData
     {
+        public string Uuid { get; set; }
         public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public string Address { get; set; }
         public object Data { get; set; }
         public DataType DataType { get; set; }
         public string Message { get; set; }
@@ -146,12 +156,25 @@ namespace ICPFCore
         public DataType DataType { get; set; }
         public string Message { get; set; }
     }
+    public class QJDataArray2
+    {
+        public string Uuid { get; set; }
+        public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public List<QJData> Data { get; set; } = new List<QJData>();        
+        public string Message { get; set; }
+    }
     public class QJDataList
     {
         public bool IsOk { get; set; }
         public List<object> Data { get; set; }
         public DataType DataType { get; set; }
         public string Message { get; set; }
+    }
+    public class QJTagData : QJData
+    {
+        public string GroupName { get; set; }
+        public string TagName { get; set; }
     }
     public class QJTagDataArray : QJDataArray
     {        
@@ -161,6 +184,14 @@ namespace ICPFCore
     {        
         public string TagName { get; set; }
         public Dictionary<string , QJDataArray> TagData { get; set; }
+    }
+    public class OperationResult<T>
+    {
+        public string Uuid { get; set; }
+        public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public string Message { get; set; }
+        public T Data { get; set; }
     }
     /// <summary>
     /// v1.初始化，支持單一數據讀取
@@ -242,8 +273,9 @@ namespace ICPFCore
     public class Program 
     {
         public static event EventHandler<EventArgs> ProgramCreated;        
-        private static ConcurrentDictionary<string , NetworkDeviceBase> NetDeviceList = new ConcurrentDictionary<string , NetworkDeviceBase>();
+        private static ConcurrentDictionary<string , DoubleNetworkBase> NetDeviceList = new ConcurrentDictionary<string , DoubleNetworkBase>();
         private static ConcurrentDictionary<string, IDeviceConfig> ConfigList = new ConcurrentDictionary<string, IDeviceConfig>();
+        
         private static Program p;
         private static List<IPlugin> plugins = new List<IPlugin>();
         public static string Test { get; set; } = "test123456";
@@ -318,9 +350,9 @@ namespace ICPFCore
             p = new Program();
 
             CommunicationTask();
-            
+
             #region 插件反射載入
-            
+
             //LoadPlugins();
 
             List<string> pluginpath = p.FindPlugin();
@@ -376,13 +408,16 @@ namespace ICPFCore
             #region 控制台指令偵測器                        
             while (true)
             {                
-                string input = Console.ReadLine();  //當街收到指令時中斷進入下面的˙判斷
+                string input1 = Console.ReadLine();  //當街收到指令時中斷進入下面的˙判斷
 
-                
+                var iargs = input1.Split(' ');
+
+                string input = iargs[0];
+
                 foreach (var plugin in AsmList)
                 {
                     //通知插件指令觸發
-                    plugin._task.CommandTrig(input);                    
+                    plugin._task.CommandTrig(input1);                    
                 }
 
                 if (input.Equals("stop", StringComparison.OrdinalIgnoreCase))
@@ -397,7 +432,7 @@ namespace ICPFCore
                     //關閉PLC連線線程
                     foreach (var device in NetDeviceList)
                     {
-                        device.Value.ConnectClose();
+                        device.Value.DeviceBase.ConnectClose();
                     }
                     NetDeviceList = null;
                     Console.WriteLine("隨意按下任何按鍵即可退出...");
@@ -411,7 +446,7 @@ namespace ICPFCore
                     {
                         if (device.Value != null)
                         {
-                            device.Value.ConnectClose();                            
+                            device.Value.DeviceBase.ConnectClose();                            
                         }                        
                     }
                     CommunicationTask();
@@ -444,8 +479,77 @@ namespace ICPFCore
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.BackgroundColor = ConsoleColor.Black;
                 }
+                if (input.Equals("getContainer", StringComparison.OrdinalIgnoreCase))
+                {
+                    
+                    if (iargs.Length == 2)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        var result = GetInstance().GetDeviceContainer(iargs[1]).WaitAsync(TimeSpan.FromMilliseconds(100));
+                        foreach (var item in result.Result.Data)
+                        {
+                            var data = item.Value;
+                            Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} Name:{item.Key} isOk:{data.IsOk} Address:{data.Address} Value:{data.Data} DataType:{data.DataType} Message:{data.Message}");
+                        }
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.BackgroundColor = ConsoleColor.Black;
+                    }
+                    else
+                    {
+                        Console.WriteLine("缺少參數!");
+                    }
+                    
+                }
+                if (input.Equals("getTag", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    if (iargs.Length == 3)
+                    {
+                        var result = GetInstance().GetTag(iargs[1], iargs[2]).WaitAsync(TimeSpan.FromMilliseconds(100));
+                        var data = result.Result.Data;                        
+                        if (result.Result.IsOk)
+                            Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} isOk:{data.IsOk} Address:{data.Address} Value:{data.Data} DataType:{data.DataType} Message:{data.Message}");
+                        else
+                            Console.WriteLine(result.Result.Message);
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.BackgroundColor = ConsoleColor.Black;
+                    }
+                    else
+                    {
+                        Console.WriteLine("缺少參數!");
+                    }                    
+                }
+                if (input.Equals("getTagGroup", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    if (iargs.Length == 3)
+                    {
+                        var result = GetInstance().GetTagGroup(iargs[1], iargs[2]).WaitAsync(TimeSpan.FromMilliseconds(100));    
+                        if (result.Result.IsOk)
+                        {
+                            foreach (var item in result.Result.Data)
+                            {
+                                var data = item;
+                                if (result.Result.IsOk)
+                                    Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} isOk:{data.IsOk} Address:{data.Address} Value:{data.Data} Data:{data.Data} DataType:{data.DataType} Message:{data.Message}");
+                                else
+                                    Console.WriteLine(result.Result.Message);
+                            }
+                        }                                                    
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.BackgroundColor = ConsoleColor.Black;
+                    }
+                    else
+                    {
+                        Console.WriteLine("缺少參數!");
+                    }
+                }
             }
             #endregion
+            
         }
         public static string GetPlugins()
         {
@@ -635,15 +739,86 @@ namespace ICPFCore
                         var protocolRes = DecodeEthernetDeviceProtocol(ethModel.CommunicationProtocol);
 
                         if (protocolRes.result)
-                        {                     
+                        {
+                            DoubleNetworkBase doubleBase = new DoubleNetworkBase();
                             NetworkDeviceBase plc = protocolRes.plcBase;
                             plc.IpAddress = ip;
                             plc.Port = port;
                             plc.ConnectTimeOut = 1000;
-                            plc.ReceiveTimeOut = 100;                            
+                            plc.ReceiveTimeOut = 100;
                             plc.ConnectServerAsync();
                             Console.WriteLine("找到配置檔[ 網路 ]設備" + filePath);
-                            NetDeviceList.TryAdd(deviceName, plc);
+
+                            doubleBase.DeviceBase = plc;
+
+                            doubleBase.TagList = ethModel.TagList;
+                                                     
+                            doubleBase.Loop = new Task(async () => {
+                                while (true)
+                                {
+                                    //doubleBase.Container.Clear();
+                                    foreach (var tag in doubleBase.TagList)
+                                    {
+                                        ReadDataModel model = new ReadDataModel();
+                                        model.Address = tag.Address;
+                                        model.ReadLength = tag.Length;
+                                        model.DeviceName = ethModel.DeviceName;
+                                        model.DatasType = tag.DataType;
+                                        model.Uuid = Guid.NewGuid().ToString();
+
+
+
+                                        var result = await GetInstance().GetData2(model);
+                                        if (result.IsOk)
+                                        {
+                                            bool isFirst = true;
+                                            foreach (var item in result.Data)
+                                            {
+                                                QJTagData rData = new QJTagData();
+                                                rData.Uuid = item.Uuid;
+                                                rData.IsOk = item.IsOk;
+                                                rData.Address = item.Address;
+                                                rData.DataType = item.DataType;
+                                                rData.DeviceName = item.DeviceName;
+                                                rData.Message = item.Message;
+                                                rData.Data = item.Data;
+
+                                                if (isFirst)
+                                                {
+                                                    rData.GroupName = tag.GroupName;
+                                                    rData.TagName = tag.TagName;
+                                                    doubleBase.Container.AddOrUpdate(tag.TagName, rData, (key, existingData) => {
+                                                        // 如果存在相同的键（数据名称），更新数据                                                        
+                                                        existingData = rData;
+                                                        return existingData;
+                                                    });
+                                                    isFirst = false;
+                                                }
+                                                else
+                                                {
+                                                    doubleBase.Container.AddOrUpdate(item.Address, rData, (key, existingData) => {
+                                                        // 如果存在相同的键（数据名称），更新数据
+                                                        existingData = rData;
+                                                        return existingData;
+                                                    });
+                                                }                                                                                                                                         
+                                            }
+                                        }
+                                    }
+                                    
+                                    foreach (var item in doubleBase.Container)
+                                    {
+                                        var data = item.Value;
+                                        if (!data.IsOk) continue;
+                                        //Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} Name:{item.Key} isOk:{data.IsOk} Address:{data.Address} Value:{data.Data} DataType:{data.DataType} Message:{data.Message}");
+
+                                        await Task.Delay(10);
+                                    }
+                                    await Task.Delay(100);
+                                }
+                            });
+                            doubleBase.Loop.Start();
+                            NetDeviceList.TryAdd(deviceName, doubleBase);
                             Console.WriteLine("添加設備" + deviceName);
                             ConfigList.TryAdd(deviceName, ethModel);
                         }
@@ -681,8 +856,8 @@ namespace ICPFCore
                             //Console.WriteLine("現有設備: " + device.Value.IpAddress + NetDeviceList.Count);
                             if (device.Value == null) continue;
 
-                            string ip = device.Value.IpAddress;
-                            int port = device.Value.Port;
+                            string ip = device.Value.DeviceBase.IpAddress;
+                            int port = device.Value.DeviceBase.Port;
 
                             var res = ToolManager.CheckTcpConnect(ip, port);
                             //Console.WriteLine("============ping : " + res);
@@ -711,6 +886,718 @@ namespace ICPFCore
                 }                
             });
         }
+        public static string[] SplitAlphaNumeric(string input)
+        {
+            // 使用正则表达式将英文字符和数字分开
+            return Regex.Split(input, @"(?<=[a-zA-Z])(?=\d)|(?<=\d)(?=[a-zA-Z])");
+        }
+        public async Task<QJDataArray2> GetData2(ReadDataModel model)
+        {
+            return await Task.Run(async () =>
+            {
+                QJDataArray2 rData = new QJDataArray2();
+                rData.Uuid = model.Uuid;
+                rData.IsOk = false;
+                //判定設備有在列表內
+                if (NetDeviceList.TryGetValue(model.DeviceName, out DoubleNetworkBase pack))
+                {
+                    //解析指令包
+                    switch (model.DatasType)
+                    {
+                        case DataType.Bool:
+                            var boolRes = await pack.DeviceBase.ReadBoolAsync(model.Address, model.ReadLength);
+                            var boolCount = 0;
+                            if (boolRes.IsSuccess)
+                            {
+                                foreach (var item in boolRes.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += boolCount;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += boolCount;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = boolRes.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = boolRes.Content[boolCount],
+                                        Message = "讀取成功!",
+                                    });
+                                    boolCount++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取bool錯誤!"
+                                    }); ;
+                                }
+                            }
+                            rData.IsOk = true;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.Int16:
+                            var int16Res = await pack.DeviceBase.ReadInt16Async(model.Address, model.ReadLength);
+                            var int16Count = 0;
+                            if (int16Res.IsSuccess)
+                            {
+                                foreach (var item in int16Res.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += int16Count;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += int16Count;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = int16Res.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = int16Res.Content[int16Count],
+                                        Message = "讀取成功!",
+                                    });
+                                    int16Count++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取Int16錯誤!"
+                                    }); ;
+                                }
+                            }                            
+                            rData.IsOk = true;                            
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.UInt16:
+                            var uint16Res = await pack.DeviceBase.ReadUInt16Async(model.Address, model.ReadLength);
+                            var uint16Count = 0;
+                            if (uint16Res.IsSuccess)
+                            {
+                                foreach (var item in uint16Res.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += uint16Count;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += uint16Count;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = uint16Res.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = uint16Res.Content[uint16Count],
+                                        Message = "讀取成功!",
+                                    });
+                                    uint16Count++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取uint16錯誤!"
+                                    }); ;
+                                }
+                            }
+                            rData.IsOk = true;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+
+                        case DataType.Int32:
+                            var int32Res = await pack.DeviceBase.ReadInt32Async(model.Address, model.ReadLength);
+                            var int32Count = 0;
+                            if (int32Res.IsSuccess)
+                            {
+                                foreach (var item in int32Res.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += int32Count;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += int32Count;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = int32Res.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = int32Res.Content[int32Count],
+                                        Message = "讀取成功!",
+                                    });
+                                    int32Count++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取int32錯誤!"
+                                    }); ;
+                                }
+                            }
+                            rData.IsOk = true;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.UInt32:
+                            var uint32Res = await pack.DeviceBase.ReadUInt32Async(model.Address, model.ReadLength);
+                            var uint32Count = 0;
+                            if (uint32Res.IsSuccess)
+                            {
+                                foreach (var item in uint32Res.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += uint32Count;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += uint32Count;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = uint32Res.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = uint32Res.Content[uint32Count],
+                                        Message = "讀取成功!",
+                                    });
+                                    uint32Count++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取uint32錯誤!"
+                                    }); ;
+                                }
+                            }
+                            rData.IsOk = true;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.Int64:
+                            var int64Res = await pack.DeviceBase.ReadInt64Async(model.Address, model.ReadLength);
+                            var int64Count = 0;
+                            if (int64Res.IsSuccess)
+                            {
+                                foreach (var item in int64Res.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += int64Count;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += int64Count;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = int64Res.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = int64Res.Content[int64Count],
+                                        Message = "讀取成功!",
+                                    });
+                                    int64Count++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取int64錯誤!"
+                                    }); ;
+                                }
+                            }
+                            rData.IsOk = true;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.UInt64:
+                            var uint64Res = await pack.DeviceBase.ReadUInt64Async(model.Address, model.ReadLength);
+                            var uint64Count = 0;
+                            if (uint64Res.IsSuccess)
+                            {
+                                foreach (var item in uint64Res.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += uint64Count;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += uint64Count;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = uint64Res.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = uint64Res.Content[uint64Count],
+                                        Message = "讀取成功!",
+                                    });
+                                    uint64Count++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取uint64錯誤!"
+                                    }); ;
+                                }
+                            }
+                            rData.IsOk = true;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.Float:
+                            var floatRes = await pack.DeviceBase.ReadFloatAsync(model.Address, model.ReadLength);
+                            var floatCount = 0;
+                            if (floatRes.IsSuccess)
+                            {
+                                foreach (var item in floatRes.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += floatCount;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += floatCount;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = floatRes.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = floatRes.Content[floatCount],
+                                        Message = "讀取成功!",
+                                    });
+                                    floatCount++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取float錯誤!"
+                                    }); ;
+                                }
+                            }
+                            rData.IsOk = true;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.Double:
+                            var doubleRes = await pack.DeviceBase.ReadDoubleAsync(model.Address, model.ReadLength);
+                            var doubleCount = 0;
+                            if (doubleRes.IsSuccess)
+                            {
+                                foreach (var item in doubleRes.Content)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += doubleCount;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += doubleCount;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        IsOk = doubleRes.IsSuccess,
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = doubleRes.Content[doubleCount],
+                                        Message = "讀取成功!",
+                                    });
+                                    doubleCount++;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < model.ReadLength; i++)
+                                {
+                                    string realAddress = string.Empty;
+                                    var addrNumber = SplitAlphaNumeric(model.Address);
+                                    if (addrNumber.Length == 1)
+                                    {
+                                        if (int.TryParse(addrNumber[0], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = number.ToString();
+                                        }
+                                    }
+                                    else if (addrNumber.Length == 2)
+                                    {
+                                        if (int.TryParse(addrNumber[1], out int number))
+                                        {
+                                            number += i;
+                                            realAddress = addrNumber[0] + number.ToString();
+                                        }
+                                    }
+                                    rData.Data.Add(new QJData()
+                                    {
+                                        Uuid = Guid.NewGuid().ToString(),
+                                        Address = realAddress,
+                                        DeviceName = model.DeviceName,
+                                        DataType = model.DatasType,
+                                        Data = 0,
+                                        Message = "讀取double錯誤!"
+                                    }); ;
+                                }
+                            }
+                            rData.IsOk = true;
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        case DataType.String:
+                            var stringRes = await pack.DeviceBase.ReadStringAsync(model.Address, model.ReadLength);
+                            if (stringRes.IsSuccess)
+                            {
+                                //rData.Data = stringRes.Content.Select(x => (object)x).ToArray();
+                            }
+                            rData.Message = ChineseConverter.Convert(stringRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
+                            rData.IsOk = stringRes.IsSuccess;
+                            
+                            rData.DeviceName = model.DeviceName;
+                            break;
+                        default:
+                            // 適當的錯誤處理
+                            break;
+                    }
+
+                }
+                else
+                {
+                    rData.IsOk = false;
+                    rData.Message = "找不到指定的設備";
+                }
+                return rData;
+            });
+        }
+
+
         /// <summary>
         /// 提供讀取模組，執行讀取指令
         /// </summary>
@@ -724,13 +1611,13 @@ namespace ICPFCore
                 rData.Uuid = model.Uuid;
                 rData.IsOk = false;
                 //判定設備有在列表內
-                if (NetDeviceList.TryGetValue(model.DeviceName, out NetworkDeviceBase pack))
-                {
+                if (NetDeviceList.TryGetValue(model.DeviceName, out DoubleNetworkBase pack))
+                {                    
                     //解析指令包
                     switch (model.DatasType)
                     {
                         case DataType.Bool:
-                            var bool16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
+                            var bool16Res = await pack.DeviceBase.ReadInt16Async(model.Address, model.ReadLength);
                             if (bool16Res.IsSuccess)
                             {
                                 rData.Data = bool16Res.Content.Select(x => (object)x).ToArray();
@@ -741,7 +1628,7 @@ namespace ICPFCore
                             rData.DeviceName = model.DeviceName;
                             break;
                         case DataType.Int16:
-                            var int16Res = await pack.ReadInt16Async(model.Address, model.ReadLength);
+                            var int16Res = await pack.DeviceBase.ReadInt16Async(model.Address, model.ReadLength);
                             if (int16Res.IsSuccess)
                             {
                                 rData.Data = int16Res.Content.Select(x => (object)x).ToArray();
@@ -752,7 +1639,7 @@ namespace ICPFCore
                             rData.DeviceName = model.DeviceName;
                             break;
                         case DataType.UInt16:
-                            var uint16Res = await pack.ReadUInt16Async(model.Address, model.ReadLength);
+                            var uint16Res = await pack.DeviceBase.ReadUInt16Async(model.Address, model.ReadLength);
                             if (uint16Res.IsSuccess)
                             {
                                 rData.Data = uint16Res.Content.Select(x => (object)x).ToArray();
@@ -764,7 +1651,7 @@ namespace ICPFCore
                             break;
 
                         case DataType.Int32:
-                            var int32Res = await pack.ReadInt32Async(model.Address, model.ReadLength);
+                            var int32Res = await pack.DeviceBase.ReadInt32Async(model.Address, model.ReadLength);
                             if (int32Res.IsSuccess)
                             {
                                 rData.Data = int32Res.Content.Select(x => (object)x).ToArray();
@@ -775,7 +1662,7 @@ namespace ICPFCore
                             rData.DeviceName = model.DeviceName;
                             break;
                         case DataType.UInt32:
-                            var uint32Res = await pack.ReadUInt32Async(model.Address, model.ReadLength);
+                            var uint32Res = await pack.DeviceBase.ReadUInt32Async(model.Address, model.ReadLength);
                             if (uint32Res.IsSuccess)
                             {
                                 rData.Data = uint32Res.Content.Select(x => (object)x).ToArray();
@@ -786,7 +1673,7 @@ namespace ICPFCore
                             rData.DeviceName = model.DeviceName;
                             break;
                         case DataType.Int64:
-                            var int64Res = await pack.ReadInt64Async(model.Address, model.ReadLength);
+                            var int64Res = await pack.DeviceBase.ReadInt64Async(model.Address, model.ReadLength);
                             if (int64Res.IsSuccess)
                             {
                                 rData.Data = int64Res.Content.Select(x => (object)x).ToArray();
@@ -797,7 +1684,7 @@ namespace ICPFCore
                             rData.DeviceName = model.DeviceName;
                             break;
                         case DataType.UInt64:
-                            var uint64Res = await pack.ReadUInt64Async(model.Address, model.ReadLength);
+                            var uint64Res = await pack.DeviceBase.ReadUInt64Async(model.Address, model.ReadLength);
                             if (uint64Res.IsSuccess)
                             {
                                 rData.Data = uint64Res.Content.Select(x => (object)x).ToArray();
@@ -808,7 +1695,7 @@ namespace ICPFCore
                             rData.DeviceName = model.DeviceName;
                             break;
                         case DataType.Float:
-                            var floatRes = await pack.ReadFloatAsync(model.Address, model.ReadLength);
+                            var floatRes = await pack.DeviceBase.ReadFloatAsync(model.Address, model.ReadLength);
                             if (floatRes.IsSuccess)
                             {
                                 rData.Data = floatRes.Content.Select(x => (object)x).ToArray();
@@ -819,7 +1706,7 @@ namespace ICPFCore
                             rData.DeviceName = model.DeviceName;
                             break;
                         case DataType.Double:
-                            var doubleRes = await pack.ReadDoubleAsync(model.Address, model.ReadLength);
+                            var doubleRes = await pack.DeviceBase.ReadDoubleAsync(model.Address, model.ReadLength);
                             if (doubleRes.IsSuccess)
                             {
                                 rData.Data = doubleRes.Content.Select(x => (object)x).ToArray();
@@ -830,7 +1717,7 @@ namespace ICPFCore
                             rData.DeviceName = model.DeviceName;
                             break;
                         case DataType.String:
-                            var stringRes = await pack.ReadStringAsync(model.Address, model.ReadLength);
+                            var stringRes = await pack.DeviceBase.ReadStringAsync(model.Address, model.ReadLength);
                             if (stringRes.IsSuccess)
                             {
                                 rData.Data = stringRes.Content.Select(x => (object)x).ToArray();
@@ -865,70 +1752,70 @@ namespace ICPFCore
             rData.Uuid = model.Uuid;
             rData.IsOk = false;
             //判定設備有在列表內
-            if (NetDeviceList.TryGetValue(model.DeviceName, out NetworkDeviceBase pack))
+            if (NetDeviceList.TryGetValue(model.DeviceName, out DoubleNetworkBase pack))
             {
                 //解析指令包
                 switch (model.DatasType)
                 {
                     case DataType.Bool:
                         bool[] boolArray = model.Datas.Select(Convert.ToBoolean).ToArray();
-                        var bool16Res = await pack.WriteAsync(model.Address, boolArray);
+                        var bool16Res = await pack.DeviceBase.WriteAsync(model.Address, boolArray);
                         rData.Message = ChineseConverter.Convert(bool16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = bool16Res.IsSuccess;
                         rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Int16:
                         short[] shortArray = model.Datas.Select(Convert.ToInt16).ToArray();
-                        var int16Res = await pack.WriteAsync(model.Address, shortArray);
+                        var int16Res = await pack.DeviceBase.WriteAsync(model.Address, shortArray);
                         rData.Message = ChineseConverter.Convert(int16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int16Res.IsSuccess;
                         rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt16:
                         ushort[] ushortArray = model.Datas.Select(Convert.ToUInt16).ToArray();
-                        var uint16Res = await pack.WriteAsync(model.Address, ushortArray);
+                        var uint16Res = await pack.DeviceBase.WriteAsync(model.Address, ushortArray);
                         rData.Message = ChineseConverter.Convert(uint16Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint16Res.IsSuccess;
                         rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Int32:
                         int[] intArray = model.Datas.Select(Convert.ToInt32).ToArray();
-                        var int32Res = await pack.WriteAsync(model.Address, intArray);
+                        var int32Res = await pack.DeviceBase.WriteAsync(model.Address, intArray);
                         rData.Message = ChineseConverter.Convert(int32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int32Res.IsSuccess;
                         rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt32:
                         uint[] uintArray = model.Datas.Select(Convert.ToUInt32).ToArray();
-                        var uint32Res = await pack.WriteAsync(model.Address, uintArray);
+                        var uint32Res = await pack.DeviceBase.WriteAsync(model.Address, uintArray);
                         rData.Message = ChineseConverter.Convert(uint32Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint32Res.IsSuccess;
                         rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Int64:
                         long[] longArray = model.Datas.Select(Convert.ToInt64).ToArray();
-                        var int64Res = await pack.WriteAsync(model.Address, longArray);
+                        var int64Res = await pack.DeviceBase.WriteAsync(model.Address, longArray);
                         rData.Message = ChineseConverter.Convert(int64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = int64Res.IsSuccess;
                         rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.UInt64:
                         ulong[] ulongArray = model.Datas.Select(Convert.ToUInt64).ToArray();
-                        var uint64Res = await pack.WriteAsync(model.Address, ulongArray);
+                        var uint64Res = await pack.DeviceBase.WriteAsync(model.Address, ulongArray);
                         rData.Message = ChineseConverter.Convert(uint64Res.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = uint64Res.IsSuccess;
                         rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Float:
                         float[] floatArray = model.Datas.Select(Convert.ToSingle).ToArray();
-                        var floatRes = await pack.WriteAsync(model.Address, floatArray);
+                        var floatRes = await pack.DeviceBase.WriteAsync(model.Address, floatArray);
                         rData.Message = ChineseConverter.Convert(floatRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = floatRes.IsSuccess;
                         rData.DeviceName = model.DeviceName;
                         break;
                     case DataType.Double:
                         double[] doubleArray = model.Datas.Select(Convert.ToDouble).ToArray();
-                        var doubleRes = await pack.WriteAsync(model.Address, doubleArray);
+                        var doubleRes = await pack.DeviceBase.WriteAsync(model.Address, doubleArray);
                         rData.Message = ChineseConverter.Convert(doubleRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                         rData.IsOk = doubleRes.IsSuccess;
                         rData.DeviceName = model.DeviceName;
@@ -937,7 +1824,7 @@ namespace ICPFCore
                         string[] stringArray = model.Datas.Select(x => x.ToString()).ToArray();
                         if (stringArray.Length == 1)
                         {
-                            var stringRes = await pack.WriteAsync(model.Address, stringArray[0]);
+                            var stringRes = await pack.DeviceBase.WriteAsync(model.Address, stringArray[0]);
                             rData.Message = ChineseConverter.Convert(stringRes.Message, ChineseConversionDirection.SimplifiedToTraditional);
                             rData.IsOk = stringRes.IsSuccess;
                             rData.DeviceName = model.DeviceName;
@@ -976,114 +1863,79 @@ namespace ICPFCore
             rData.Message = "錯誤，請勿隨意注入惡意程式!!";
             return rData;
         }
-        public async Task<QJTagGroupDataArray> GetTagGroup(string deviceName, string groupName)
+        public async Task<OperationResult<List<QJTagData>>> GetTagGroup(string deviceName, string groupName)
         {
-            //Dictionary<string, QJDataArray> tagData = new Dictionary<string, QJDataArray>();
-            QJTagGroupDataArray rData = new QJTagGroupDataArray();
-            rData.TagData = new Dictionary<string, QJDataArray>();
-            if (ConfigList.TryGetValue(deviceName, out IDeviceConfig model))
+            if (groupName.Length == 0) return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，群組名稱為空!" };
+            if (deviceName.Length == 0) return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，設備名稱為空!" };
+            if (NetDeviceList.TryGetValue(deviceName, out DoubleNetworkBase deviceModel))
             {
-
-                var findGroupTag = model.TagList.Where(x => x.GroupName == groupName).ToList();
-                if (findGroupTag == null)
+                List<QJTagData> rData = new List<QJTagData>();
+                var result = deviceModel.Container.Where(x => x.Value.GroupName == groupName).ToList();
+                foreach (var item in result)
                 {
-                    rData.IsOk = false;
-                    rData.Message = "找不到指定的TagGroup";
-                    return rData;
+                    rData.Add(item.Value);
                 }
-
-                foreach (var tag in findGroupTag)
+                if (rData.Count != 0)
                 {
-                    var fTagName = tag.TagName;
-                    var fAddress = tag.Address;
-                    var fDataType = tag.DataType;
-                    var fLength = tag.Length;
-
-                    switch (model)
-                    {
-                        case EthernetDeviceConfigModel:
-                            var ReadRes = await GetData(new ReadDataModel()
-                            {
-                                DeviceName = deviceName,
-                                Address = fAddress,
-                                DatasType = fDataType,
-                                ReadLength = fLength,
-                            });
-                            rData.TagData.Add(fTagName, ReadRes);
-                            //return new QJTagGroupDataArray() { IsOk = ReadRes.IsOk, TagName = fTagName, DeviceName = deviceName, DataType = fDataType, Data = ReadRes.Data, Message = ReadRes.Message };
-                            break;
-                        case SerialDeviceConfigModel:
-                            break;
-                        default:
-                            //throw new Exception("找的到設備，但是是無法辨識的配置檔!");
-                            return new QJTagGroupDataArray() { IsOk = false, Message = "找的到設備，但是是無法辨識的配置檔!" };
-                    }
+                    return new OperationResult<List<QJTagData>>() { IsOk = true, Data = rData, DeviceName = deviceName, Message = "獲取標籤成功!" };
                 }
-
-                //rData.Uuid = Guid.NewGuid().ToString();
-                rData.IsOk = true;
-                //rData.TagData = tagData;
-                rData.DeviceName = deviceName;                
-                rData.Message = "標籤群組解析成功!";
-                return rData;
+                else
+                {
+                    return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，找不到指定的標籤!" };
+                }
             }
-            return new QJTagGroupDataArray() { IsOk = false, Message = "找不到指定的設備!" };
+            else
+            {
+                return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
+            }            
         }
-        public async Task<QJTagDataArray> GetTag(string deviceName , string tagName)
+        public async Task<OperationResult<QJTagData>> GetTag(string deviceName , string tagName)
         {
-            QJTagDataArray rData = new QJTagDataArray();
-            if (ConfigList.TryGetValue(deviceName , out IDeviceConfig model))
-            {   
-                var findTag = model.TagList.Where(x => x.TagName == tagName).FirstOrDefault();
-                if (findTag == null)
+            if (tagName.Length == 0) return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，標籤名稱為空!" };
+            if (deviceName.Length == 0) return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，設備名稱為空!" };
+            if (NetDeviceList.TryGetValue(deviceName, out DoubleNetworkBase deviceModel))
+            {
+                if (deviceModel.Container.TryGetValue(tagName , out QJTagData dataModel))
                 {
-                    rData.IsOk= false;
-                    rData.Message = "找不到指定的TagName";
-                    return rData;
+                    return new OperationResult<QJTagData>() { IsOk = true, Data = dataModel, DeviceName = deviceName, Message = "獲取標籤成功!" };
                 }
-
-                var fTagName = findTag.TagName;
-                var fAddress = findTag.Address;
-                var fDataType = findTag.DataType;
-                var fLength = findTag.Length;
-                switch (model)
+                else
                 {
-                    case EthernetDeviceConfigModel:
-                        var ReadRes = await GetData(new ReadDataModel() {
-                            DeviceName = deviceName,
-                            Address = fAddress,
-                            DatasType = fDataType,
-                            ReadLength = fLength,
-                        });
-                        return new QJTagDataArray() { IsOk = ReadRes.IsOk, TagName = fTagName, DeviceName = deviceName, DataType = fDataType, Data = ReadRes.Data, Message = ReadRes.Message };                        
-                    case SerialDeviceConfigModel:
-                        break;
-                    default:
-                        //throw new Exception("找的到設備，但是是無法辨識的配置檔!");
-                        return new QJTagDataArray() { IsOk = false, Message = "找的到設備，但是是無法辨識的配置檔!" };
-                }
+                    return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，找不到指定的標籤!" };
+                }                                
             }
-            return new QJTagDataArray() { IsOk = false, Message = "找不到指定的設備!" };
+            else
+            {
+                return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
+            }            
+        }
+        public async Task<OperationResult<ConcurrentDictionary<string, QJTagData>>> GetDeviceContainer(string deviceName)
+        {
+            if(NetDeviceList.TryGetValue(deviceName , out DoubleNetworkBase deviceModel))
+            {
+                return new OperationResult<ConcurrentDictionary<string, QJTagData>>() { IsOk = true, Data = deviceModel.Container, DeviceName = deviceName, Message = "獲取設備容器成功!" };
+            }
+            else
+            {
+                return new OperationResult<ConcurrentDictionary<string, QJTagData>>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
+            }
+            return new OperationResult<ConcurrentDictionary<string, QJTagData>>() { IsOk = false, Message = "錯誤!" };
         }
         /// <summary>
         /// 獲取當前配置黨載入的設備
         /// </summary>
         /// <returns></returns>
-        public async Task<QJDataArray> GetMachins()
+        public async Task<OperationResult<List<string>>> GetMachins()
         {
-            QJDataArray result = new QJDataArray();
-            result.DataType = DataType.String;
-
-            result.Data = new string[NetDeviceList.Count];
-            int count = 0;
+            OperationResult<List<string>> rData = new OperationResult<List<string>>();
+            rData.Uuid = Guid.NewGuid().ToString();
+            rData.Data = new List<string>();
+            rData.IsOk = true;                        
             foreach (var device in NetDeviceList)
-            {                
-                result.Data[count] = device.Key;
-                count++;
-            }
-            result.IsOk = true;
-            return result;
-
+            {
+                rData.Data.Add(device.Key);
+            }            
+            return rData;
         }
         /// <summary>
         /// 解析通訊型通訊，物件實例化
@@ -1160,6 +2012,7 @@ namespace ICPFCore
             if (!isAuthorized && ForTestCount < ForTestCounter)
                 isAuthorized = true;
         }
+        
     }
 
     public class ToolManager

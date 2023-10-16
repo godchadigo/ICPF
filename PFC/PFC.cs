@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using TouchSocket.Core;
 using TouchSocket.Sockets;
@@ -306,7 +307,7 @@ namespace PFC
             }
         }
 
-        public async Task<OperationModel> GetTag(string deviceName, string tagName)
+        public async Task<OperationResult<QJTagData>> GetTag(string deviceName, string tagName)
         {
             try
             {
@@ -337,28 +338,30 @@ namespace PFC
                         }
 
                         if (ReceviceBufferString == null) continue;
-                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(ReceviceBufferString);
+                        if (ReceviceBufferString == "") continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<OperationResult<QJTagData>>(ReceviceBufferString);
                         if (ReceviceBuffer.Uuid == readModel.Uuid)
                         {
                             if (ReceviceBuffer.Data == null) continue;
-                            return new OperationModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = (QJDataArray)ReceviceBuffer };
+                            ReceviceBufferString = "";
+                            return ReceviceBuffer;
                         }
                     }
 
-                    return new OperationModel() { IsOk = false, Message = "接收超時!" };
+                    return new OperationResult<QJTagData>() { IsOk = false, Message = "接收超時!" };
                   
                 }
                 else
                 {
-                    return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
+                    return new OperationResult<QJTagData>() { IsOk = false, Message = "通訊失敗!" };
                 }
             }
             catch (Exception ex)
             {
-                return new OperationModel() { IsOk = false, Message = ex.Message };
+                return new OperationResult<QJTagData>() { IsOk = false, Message = ex.Message };
             }
         }
-        public async Task<OperationTagGroupModel> GetTagGroup(string deviceName, string groupName)
+        public async Task<OperationResult<List<QJTagData>>> GetTagGroup(string deviceName, string groupName)
         {
             try
             {
@@ -388,27 +391,28 @@ namespace PFC
                             break;
                         }
 
-                        if (ReceviceBufferString == null) continue;
-                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJTagGroupDataArray>(ReceviceBufferString);
+                        if (ReceviceBufferString == "") continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<OperationResult<List<QJTagData>>>(ReceviceBufferString);
                         if (ReceviceBuffer?.Uuid == readModel.Uuid)
-                        {                                                 
-                            return new OperationTagGroupModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = ReceviceBuffer };                            
+                        {                                                                             
+                            ReceviceBufferString = String.Empty;
+                            return ReceviceBuffer;
                         }
                     }
-                    return new OperationTagGroupModel() { IsOk = false, Message = "接收超時!" };
+                    return new OperationResult<List<QJTagData>> { IsOk = false, Message = "接收超時!" };
                 }
                 else
                 {
-                    return new OperationTagGroupModel() { IsOk = false, Message = "通訊失敗!" };
+                    return new OperationResult<List<QJTagData>>{ IsOk = false, Message = "通訊失敗!" };
                 }
             }
             catch (Exception ex)
             {
-                return new OperationTagGroupModel() { IsOk = false, Message = ex.Message };
+                return new OperationResult<List<QJTagData>> { IsOk = false, Message = ex.Message };
             }
         }
 
-        public async Task<OperationModel> GetMachins()
+        public async Task<OperationResult<List<string>>> GetMachins()
         {
             try
             {
@@ -435,25 +439,27 @@ namespace PFC
                         {
                             break;
                         }
-                        if (ReceviceBufferString == null) continue;
-                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<QJDataArray>(ReceviceBufferString);
+                        if (ReceviceBufferString == "") continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<OperationResult<List<string>>>(ReceviceBufferString);
                         if (ReceviceBuffer.Uuid == model.Uuid)
-                            return new OperationModel() { IsOk = ReceviceBuffer.IsOk, DeviceName = ReceviceBuffer.DeviceName, Message = ReceviceBuffer.Message, Data = (QJDataArray)ReceviceBuffer };
+                        {
+                            ReceviceBufferString = "";
+                            return ReceviceBuffer;
+                        }                            
                     }
-
-                    return new OperationModel() { IsOk = false, Message = "接收超時!" };                    
+                    return new OperationResult<List<string>> { IsOk = false, Message = "接收超時!" };                    
                 }
                 else
                 {
-                    return new OperationModel() { IsOk = false, Message = "通訊失敗!" };
+                    return new OperationResult<List<string>> { IsOk = false, Message = "通訊失敗!" };
                 }
             }
             catch (Exception ex)
             {
-                return new OperationModel() { IsOk = false, Message = ex.Message };
+                return new OperationResult<List<string>> { IsOk = false, Message = ex.Message };
             }
         }
-        public async Task<OperationModel<ContainerModelPacket>> GetContainer()
+        public async Task<OperationResult<ConcurrentDictionary<string, QJTagData>>> GetContainer(string deviceName)
         {
             try
             {
@@ -463,6 +469,7 @@ namespace PFC
                     model.Uuid = Guid.NewGuid().ToString();
                     model.iRWDataOperation = IRWDataOperation.Command;
                     model.iRWCommand = IRWDataCommand.GetContainer;
+                    model.Address = deviceName;
 
                     Console.WriteLine("GetContainer: " + model.Uuid);
                     var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(model, Newtonsoft.Json.Formatting.None);
@@ -481,22 +488,26 @@ namespace PFC
                         {
                             break;
                         }
-                        if (ReceviceBufferString == null) continue;
-                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<ContainerModelPacket>(ReceviceBufferString);
+                        if (ReceviceBufferString == "") continue;
+                        var ReceviceBuffer = Newtonsoft.Json.JsonConvert.DeserializeObject<OperationResult<ConcurrentDictionary<string, QJTagData>>>(ReceviceBufferString);
                         if (ReceviceBuffer.Uuid == model.Uuid)
-                            return new OperationModel<ContainerModelPacket>() { IsOk = true, DeviceName = "", Message = "成功獲取內容物!", Data = ReceviceBuffer };
+                        {
+                            ReceviceBufferString = String.Empty;
+                            return ReceviceBuffer;
+                        }
+                            
                     }
 
-                    return new OperationModel<ContainerModelPacket>() { IsOk = false, Message = "接收超時!" };
+                    return new OperationResult<ConcurrentDictionary<string, QJTagData>> { IsOk = false, Message = "接收超時!" };
                 }
                 else
                 {
-                    return new OperationModel<ContainerModelPacket>() { IsOk = false, Message = "通訊失敗!" };
+                    return new OperationResult<ConcurrentDictionary<string, QJTagData>> { IsOk = false, Message = "通訊失敗!" };
                 }
             }
             catch (Exception ex)
             {
-                return new OperationModel<ContainerModelPacket>() { IsOk = false, Message = ex.Message };
+                return new OperationResult<ConcurrentDictionary<string, QJTagData>> { IsOk = false, Message = ex.Message };
             }
         }
         public OperationModel AddController(string  deviceName , int commInterface , int CommProtocol , string ip , int port)
@@ -504,18 +515,7 @@ namespace PFC
 
             return new OperationModel() { IsOk = false };
         }
-        private void ContainerLoop()
-        {
-            Task.Run(async () =>
-            {
-                while (true)
-                {
-                    var machins = await GetContainer();
-                    
-                    Thread.Sleep(1000);
-                }                
-            });            
-        }
+        
     }
 
     #region QJProtocol
@@ -707,10 +707,18 @@ namespace PFC
     /// </summary>
     public class QJData
     {
+        public string Uuid { get; set; }
         public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public string Address { get; set; }
         public object Data { get; set; }
         public DataType DataType { get; set; }
         public string Message { get; set; }
+    }
+    public class QJTagData : QJData
+    {
+        public string GroupName { get; set; }
+        public string TagName { get; set; }
     }
     public interface IQJData
     {
@@ -762,5 +770,13 @@ namespace PFC
         public List<object> Data { get; set; }
         public DataType DataType { get; set; }
         public string Message { get; set; }
+    }
+    public class OperationResult<T>
+    {
+        public string Uuid { get; set; }
+        public bool IsOk { get; set; }
+        public string DeviceName { get; set; }
+        public string Message { get; set; }
+        public T Data { get; set; }
     }
 }

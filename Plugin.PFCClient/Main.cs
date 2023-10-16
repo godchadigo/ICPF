@@ -28,7 +28,7 @@ namespace PluginPFCClient
         public override void onLoading()
         {
             base.onLoading();
-            Loop();
+            
             t1 = new Thread(() =>
             {
 
@@ -114,17 +114,12 @@ namespace PluginPFCClient
 
                             if (packRes.iRWCommand == IRWDataCommand.GetContainer)
                             {
-                                lock (locker)
-                                {
-                                    var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(new ContainerModelPacket()
-                                    {
-                                        Uuid = packRes.Uuid,
-                                        Container = ContainerBuffer,
-                                    });
-                                    Console.WriteLine("GetContainer " + jsonStr);
-                                    sc.Send(jsonStr);
-                                }
+                                var result = await Core.GetDeviceContainer(packRes.Address);                                
+                                result.Uuid = packRes.Uuid;
+                                var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(result);
                                 
+                                Console.WriteLine("GetContainer " + jsonStr);
+                                sc.Send(jsonStr);
                             }
                         }
                     }
@@ -189,77 +184,6 @@ namespace PluginPFCClient
         }
         private List<ContainerModel> ContainerBuffer = new List<ContainerModel>();
         private readonly object locker = new object();
-        private void Loop()
-        {
-            Task.Run(async () =>
-            {
-                while (true)
-                {
-                    QJDataArray model = new QJDataArray();
-                    var machinsResult = await Core.GetMachins();
-                    //Parallel.ForEach(machinsResult.Data , _machinName => { 
-                    foreach (string machinName in machinsResult.Data)
-                    {
-
-                        //string machinName = (string)_machinName;
-                        var tagsGroup = await Core.GetTagList(machinName);
-                        foreach (var _tags in tagsGroup.Data)
-                        {
-
-                            Tag tags = (Tag)_tags;
-                            ReadDataModel readModel = new ReadDataModel()
-                            {
-                                DeviceName = machinName,
-                                Address = tags.Address,
-                                DatasType = tags.DataType,
-                                ReadLength = tags.Length,
-                            };
-
-                            Task.Factory.StartNew(async() =>
-                            {
-                                var result = await GetData(readModel);
-                                if (result == null) return;
-
-                                lock (locker)
-                                {
-                                    var tagResult = ContainerBuffer.Where(x => x.DeviceName == machinName && x.TagGroup == tags.GroupName && x.TagName == tags.TagName).FirstOrDefault();
-                                    if (tagResult != null)
-                                    {
-                                        tagResult.Data = result;
-                                    }
-                                    else
-                                    {
-                                        ContainerBuffer.Add(new ContainerModel()
-                                        {
-                                            Uuid = Guid.NewGuid().ToString(),
-                                            DeviceName = machinName,
-                                            TagGroup = tags.GroupName,
-                                            TagName = tags.TagName,
-                                            Data = result,
-                                        });
-                                    }
-                                }
-                            });
-                            
-                        }
-                        //});                        
-                    }
-
-                    foreach (var tag in ContainerBuffer)
-                    {
-                        if (tag.Data.IsOk)
-                        {
-                            Console.WriteLine($"{tag.DeviceName} {tag.TagGroup} {tag.TagName} {tag.Data.Data[0]}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"{tag.DeviceName} {tag.TagGroup} {tag.TagName} {tag.Data.Message}");
-                        }
-
-                    }
-                    await Task.Delay(10);
-                }
-            });
-        }
+        
     }
 }

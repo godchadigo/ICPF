@@ -159,30 +159,34 @@ namespace WinFormPluginFrameworkTest
             //var result = await pfc.GetTag("参ㄈ1F-1", "筿瑈");
             var result = await pfc.GetTagGroup("参ㄈ1F-1", "膀娄计沮");
             
-            
-            Console.WriteLine(result.Message);
-            this.BeginInvoke(new Action(delegate {
-                richTextBox1.AppendText(result.DeviceName + " # " + result.Message + " | " + result.ToString() + "\r\n");
-            }));
-
+            if (result.IsOk)
+            {
+                foreach (var item in result.Data)
+                {
+                    //Console.WriteLine(result.Message);
+                    this.BeginInvoke(new Action(delegate {
+                        richTextBox1.AppendText(item.DeviceName + " # " + item.Message + " | Data:" + item.Data + "TagName:" + item.TagName + "GroupName:" + item.GroupName + "\r\n");
+                    }));
+                }
+            }         
         }
 
         private async void button5_Click(object sender, EventArgs e)
         {
             await Task.Run(async() =>
             {
-                var result = await pfc.GetContainer();
+                var result = await pfc.GetContainer("参ㄈ1F-1");
                 if (!result.IsOk) return;
                 this.BeginInvoke(new Action(delegate {
-                    foreach (var tag in result.Data.Container)
+                    foreach (var tag in result.Data)
                     {
-                        if (tag.Data.IsOk)
-                        {
-                            richTextBox1.AppendText(" # " + result.Message + " | " + tag.Data.DeviceName + tag.TagGroup + " " + tag.TagName + " " + tag.Data.Data[0] + "\r\n");
+                        if (tag.Value.IsOk)
+                        {                            
+                            richTextBox1.AppendText(" # " + result.Message + " | " + tag.Value.GroupName + " " + tag.Value.TagName + " " + tag.Value.Data + "\r\n");
                         }
                         else
                         {
-                            //richTextBox1.AppendText(" # " + result.Message + " | " + tag.Data.DeviceName + tag.Data.Message + "\r\n");
+                            richTextBox1.AppendText(" # " + result.Message + " | " + tag.Value.DeviceName + tag.Value.Message + "\r\n");
                         }
 
                     }
@@ -190,6 +194,38 @@ namespace WinFormPluginFrameworkTest
                 }));
             });
             
+        }
+
+        private async void button6_Click(object sender, EventArgs e)
+        {
+            await Task.Run(async () =>
+            {
+                while (true)
+                {
+                    var result = await pfc.GetTag("参ㄈ1F-1", "筿溃");
+                    if (!result.IsOk) return;
+                    this.BeginInvoke(new Action(delegate {
+                        richTextBox1.AppendText(" # " + result.Data.Message + " | DeviceName" + result.Data.DeviceName + " TagName:" + result.Data.TagName + " Data:" + result.Data.Data + "\r\n");
+                    }));
+                    await Task.Delay(10);
+                }
+                
+            });
+        }
+
+        private async void button7_Click(object sender, EventArgs e)
+        {
+            await Task.Run(async () =>
+            {
+                var result = await pfc.GetMachins();
+                if (!result.IsOk) return;
+                this.BeginInvoke(new Action(delegate {
+                    foreach (var deviceName in result.Data)
+                    {
+                        richTextBox1.AppendText(" # " + result.Message + " | DeviceName" + deviceName + "\r\n");
+                    }                    
+                }));
+            });
         }
     }
 }
