@@ -851,6 +851,9 @@ namespace ICPFCore
 
 
         }
+        /// <summary>
+        /// 設備容器刷新器
+        /// </summary>
         private void ContainerRefresher()
         {
             
