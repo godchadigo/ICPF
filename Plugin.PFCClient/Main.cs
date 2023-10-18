@@ -119,7 +119,7 @@ namespace PluginPFCClient
                                 var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(result);
                                 
                                 Console.WriteLine("GetContainer " + jsonStr);
-                                sc.Send(jsonStr);
+                                await sc.SendAsync(jsonStr);
                             }
                         }
                     }

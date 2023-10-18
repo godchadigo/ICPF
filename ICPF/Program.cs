@@ -43,23 +43,30 @@ namespace ICPFCore
         {
             return await Core.SetData(model);
         }
-        public virtual async Task<OperationResult<QJTagData>> GetTag(string deviceName, string tagName)
+        public virtual OperationResult<QJTagData> GetTag(string deviceName, string tagName)
         {
-            return await Core.GetTag(deviceName, tagName);
+            return Core.GetTag(deviceName, tagName);
+        }
+        public virtual async Task<OperationResult<QJTagData>> GetTagAsync(string deviceName, string tagName)
+        {
+            return await Core.GetTagAsync(deviceName, tagName);
         }
         public virtual async Task<QJDataArray> GetTagList(string deviceName)
         {
             return await Core.GetTagList(deviceName);
         }
-        public virtual async Task<OperationResult<List<string>>> GetMachins()
+        public virtual OperationResult<List<string>> GetMachins()
         {
-            return await Core.GetMachins();
+            return Core.GetMachins();
         }
-        public virtual async Task<OperationResult<ConcurrentDictionary<string, QJTagData>>> GetDeviceContainer(string deviceName)
+        public virtual async Task<OperationResult<ConcurrentDictionary<string, QJTagData>>> GetDeviceContainerAsync(string deviceName)
         {
-            return await Core.GetDeviceContainer(deviceName);
+            return await Core.GetDeviceContainerAsync(deviceName);
         }
-
+        public virtual OperationResult<ConcurrentDictionary<string, QJTagData>> GetDeviceContainer(string deviceName)
+        {
+            return Core.GetDeviceContainer(deviceName);
+        }
 
     }
 
@@ -473,8 +480,8 @@ namespace ICPFCore
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.BackgroundColor = ConsoleColor.Black;
-                    var result = GetInstance().GetMachins().WaitAsync(TimeSpan.FromMilliseconds(100));
-                    foreach (var device in result.Result.Data)
+                    var result = GetInstance().GetMachins();
+                    foreach (var device in result.Data)
                     {
                         WriteLine("找到設備" + device);
                     }                    
@@ -488,8 +495,8 @@ namespace ICPFCore
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.BackgroundColor = ConsoleColor.Black;
-                        var result = GetInstance().GetDeviceContainer(iargs[1]).WaitAsync(TimeSpan.FromMilliseconds(100));
-                        foreach (var item in result.Result.Data)
+                        var result = GetInstance().GetDeviceContainer(iargs[1]);
+                        foreach (var item in result.Data)
                         {
                             var data = item.Value;
                             Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} Name:{item.Key} isOk:{data.IsOk} Address:{data.Address} Value:{data.Data} DataType:{data.DataType} Message:{data.Message}");
@@ -509,12 +516,12 @@ namespace ICPFCore
                     Console.BackgroundColor = ConsoleColor.Black;
                     if (iargs.Length == 3)
                     {
-                        var result = GetInstance().GetTag(iargs[1], iargs[2]).WaitAsync(TimeSpan.FromMilliseconds(100));
-                        var data = result.Result.Data;                        
-                        if (result.Result.IsOk)
+                        var result = GetInstance().GetTag(iargs[1], iargs[2]);
+                        var data = result.Data;                        
+                        if (result.IsOk)
                             Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} isOk:{data.IsOk} Address:{data.Address} Value:{data.Data} DataType:{data.DataType} Message:{data.Message}");
                         else
-                            Console.WriteLine(result.Result.Message);
+                            Console.WriteLine(result.Message);
                         Console.ForegroundColor = ConsoleColor.White;
                         Console.BackgroundColor = ConsoleColor.Black;
                     }
@@ -1942,7 +1949,7 @@ namespace ICPFCore
                 return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
             }            
         }
-        public async Task<OperationResult<QJTagData>> GetTag(string deviceName , string tagName)
+        public async Task<OperationResult<QJTagData>> GetTagAsync(string deviceName , string tagName)
         {
             if (tagName.Length == 0) return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，標籤名稱為空!" };
             if (deviceName.Length == 0) return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，設備名稱為空!" };
@@ -1962,9 +1969,41 @@ namespace ICPFCore
                 return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
             }            
         }
-        public async Task<OperationResult<ConcurrentDictionary<string, QJTagData>>> GetDeviceContainer(string deviceName)
+        public OperationResult<QJTagData> GetTag(string deviceName, string tagName)
+        {
+            if (tagName.Length == 0) return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，標籤名稱為空!" };
+            if (deviceName.Length == 0) return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，設備名稱為空!" };
+            if (NetDeviceList.TryGetValue(deviceName, out DoubleNetworkBase deviceModel))
+            {
+                if (deviceModel.Container.TryGetValue(tagName, out QJTagData dataModel))
+                {
+                    return new OperationResult<QJTagData>() { IsOk = true, Data = dataModel, DeviceName = deviceName, Message = "獲取標籤成功!" };
+                }
+                else
+                {
+                    return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，找不到指定的標籤!" };
+                }
+            }
+            else
+            {
+                return new OperationResult<QJTagData>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
+            }
+        }
+        public async Task<OperationResult<ConcurrentDictionary<string, QJTagData>>> GetDeviceContainerAsync(string deviceName)
         {
             if(NetDeviceList.TryGetValue(deviceName , out DoubleNetworkBase deviceModel))
+            {
+                return new OperationResult<ConcurrentDictionary<string, QJTagData>>() { IsOk = true, Data = deviceModel.Container, DeviceName = deviceName, Message = "獲取設備容器成功!" };
+            }
+            else
+            {
+                return new OperationResult<ConcurrentDictionary<string, QJTagData>>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
+            }
+            return new OperationResult<ConcurrentDictionary<string, QJTagData>>() { IsOk = false, Message = "錯誤!" };
+        }
+        public OperationResult<ConcurrentDictionary<string, QJTagData>> GetDeviceContainer(string deviceName)
+        {
+            if (NetDeviceList.TryGetValue(deviceName, out DoubleNetworkBase deviceModel))
             {
                 return new OperationResult<ConcurrentDictionary<string, QJTagData>>() { IsOk = true, Data = deviceModel.Container, DeviceName = deviceName, Message = "獲取設備容器成功!" };
             }
@@ -1978,7 +2017,7 @@ namespace ICPFCore
         /// 獲取當前配置黨載入的設備
         /// </summary>
         /// <returns></returns>
-        public async Task<OperationResult<List<string>>> GetMachins()
+        public  OperationResult<List<string>> GetMachins()
         {
             OperationResult<List<string>> rData = new OperationResult<List<string>>();
             rData.Uuid = Guid.NewGuid().ToString();
@@ -1987,7 +2026,7 @@ namespace ICPFCore
             foreach (var device in NetDeviceList)
             {
                 rData.Data.Add(device.Key);
-            }            
+            }
             return rData;
         }
         /// <summary>
