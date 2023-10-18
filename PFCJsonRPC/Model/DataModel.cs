@@ -41,4 +41,13 @@ namespace PFCJsonRPC.Model
         public string GroupName { get; set; }
         public string TagName { get; set; }
     }
+    public class Tag
+    {
+        public string GroupName { get; set; }
+        public string TagName { get; set; }
+        public bool IsOk { get; set; } = false;
+        public string Address { get; set; }
+        public DataType DataType { get; set; }
+        public ushort Length { get; } = 1;
+    }
 }

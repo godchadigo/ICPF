@@ -170,5 +170,18 @@ namespace PFCJsonRPC
                 return new OperationResult<QJTagData>() { IsOk = false, Message = "FPC失敗!" + ex.Message };
             }
         }
+        public OperationResult<List<Tag>> GetTagList(string deviceName)
+        {
+            if (!isConnected) return new OperationResult<List<Tag>>() { IsOk = false, Message = "FPC斷線!" };
+            try
+            {
+
+                return SendObject<OperationResult<List<Tag>>>("GetTagList", TouchSocket.Rpc.InvokeOption.WaitInvoke, deviceName);
+            }
+            catch (Exception ex)
+            {
+                return new OperationResult<List<Tag>>() { IsOk = false, Message = "FPC失敗!" + ex.Message };
+            }
+        }
     }
 }

@@ -117,5 +117,21 @@ namespace JsonFPCTest
             richTextBox1.Select(richTextBox1.Text.Length,0);
             richTextBox1.ScrollToCaret();
         }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            if (fpc.isConnected)
+            {
+                var result = fpc.GetTagList("Modbus");
+                if (result.IsOk)
+                {
+                    foreach (var tag in result.Data)
+                    {
+                        richTextBox1.AppendText($"Uuid:{result.Uuid} TagName:{tag.TagName} GroupName:{tag.GroupName} \r\n");
+                    }
+                }
+                    
+            }
+        }
     }
 }

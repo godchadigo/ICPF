@@ -85,5 +85,11 @@ namespace Plugin.JsonRPC
             var res = Core.GetTag(deviceName , tagName);
             return res;
         }
+        [JsonRpc(MethodInvoke = true)]
+        public OperationResult<List<Tag>> GetTagList(string deviceName)
+        {
+            var res = Core.GetTagList(deviceName);
+            return res;
+        }
     }
 }

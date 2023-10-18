@@ -51,9 +51,13 @@ namespace ICPFCore
         {
             return await Core.GetTagAsync(deviceName, tagName);
         }
-        public virtual async Task<QJDataArray> GetTagList(string deviceName)
+        public virtual OperationResult<List<Tag>> GetTagList(string deviceName)
         {
-            return await Core.GetTagList(deviceName);
+            return Core.GetTagList(deviceName);
+        }
+        public virtual async Task<OperationResult<List<Tag>>> GetTagListAsync(string deviceName)
+        {
+            return await Core.GetTagListAsync(deviceName);
         }
         public virtual OperationResult<List<string>> GetMachins()
         {
@@ -1903,15 +1907,35 @@ namespace ICPFCore
             }
             return rData;
         }
-        public async Task<QJDataArray> GetTagList(string deviceName)
+        public OperationResult<List<Tag>> GetTagList(string deviceName)
         {
-            QJDataArray rData = new QJDataArray();
+            OperationResult<List<Tag>> rData = new OperationResult<List<Tag>>();
             rData.IsOk = false;
             rData.Uuid = Guid.NewGuid().ToString();
             if (ConfigList.TryGetValue(deviceName, out IDeviceConfig model))
             {
                 rData.IsOk = true;
-                rData.Data = model.TagList.ToArray();
+                rData.Data = model.TagList;
+                return rData;
+            }
+            else
+            {
+                rData.IsOk = false;
+                rData.Message = "找不到指定的設備!";
+                return rData;
+            }
+            rData.Message = "錯誤，請勿隨意注入惡意程式!!";
+            return rData;
+        }
+        public async Task<OperationResult<List<Tag>>> GetTagListAsync(string deviceName)
+        {
+            OperationResult<List<Tag>> rData = new OperationResult<List<Tag>>();
+            rData.IsOk = false;
+            rData.Uuid = Guid.NewGuid().ToString();
+            if (ConfigList.TryGetValue(deviceName, out IDeviceConfig model))
+            {
+                rData.IsOk = true;
+                rData.Data = model.TagList;
                 return rData;
             }
             else
