@@ -91,5 +91,11 @@ namespace Plugin.JsonRPC
             var res = Core.GetTagList(deviceName);
             return res;
         }
+        [JsonRpc(MethodInvoke = true)]
+        public OperationResult<List<QJTagData>> GetTagGroup(string deviceName, string groupName)
+        {
+            var res = Core.GetTagGroup(deviceName , groupName);
+            return res;
+        }
     }
 }

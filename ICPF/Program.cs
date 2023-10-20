@@ -71,6 +71,10 @@ namespace ICPFCore
         {
             return Core.GetDeviceContainer(deviceName);
         }
+        public virtual OperationResult<List<QJTagData>> GetTagGroup(string deviceName, string groupName)
+        {
+            return Core.GetTagGroup(deviceName, groupName);
+        }
 
     }
 
@@ -462,6 +466,8 @@ namespace ICPFCore
                             device.Value.DeviceBase.ConnectClose();                            
                         }                        
                     }
+                    NetDeviceList.Clear();
+                    NetDeviceList = new ConcurrentDictionary<string, DoubleNetworkBase>();
                     CommunicationTask();
                 }
                 if (input.Equals("unload", StringComparison.OrdinalIgnoreCase))
@@ -540,16 +546,16 @@ namespace ICPFCore
                     Console.BackgroundColor = ConsoleColor.Black;
                     if (iargs.Length == 3)
                     {
-                        var result = GetInstance().GetTagGroup(iargs[1], iargs[2]).WaitAsync(TimeSpan.FromMilliseconds(100));    
-                        if (result.Result.IsOk)
+                        var result = GetInstance().GetTagGroup(iargs[1], iargs[2]);    
+                        if (result.IsOk)
                         {
-                            foreach (var item in result.Result.Data)
+                            foreach (var item in result.Data)
                             {
                                 var data = item;
-                                if (result.Result.IsOk)
+                                if (result.IsOk)
                                     Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} isOk:{data.IsOk} Address:{data.Address} Value:{data.Data} Data:{data.Data} DataType:{data.DataType} Message:{data.Message}");
                                 else
-                                    Console.WriteLine(result.Result.Message);
+                                    Console.WriteLine(result.Message);
                             }
                         }                                                    
                         Console.ForegroundColor = ConsoleColor.White;
@@ -837,9 +843,9 @@ namespace ICPFCore
                                         if (!data.IsOk) continue;
                                         //Console.WriteLine($"Uuid:{data.Uuid} DeviceName:{data.DeviceName} Name:{item.Key} isOk:{data.IsOk} Address:{data.Address} Value:{data.Data} DataType:{data.DataType} Message:{data.Message}");
 
-                                        await Task.Delay(10);
+                                        //await Task.Delay(10);
                                     }
-                                    await Task.Delay(100);
+                                    await Task.Delay(10);
                                 }
                             });
                             doubleBase.Loop.Start();
@@ -1947,7 +1953,7 @@ namespace ICPFCore
             rData.Message = "錯誤，請勿隨意注入惡意程式!!";
             return rData;
         }
-        public async Task<OperationResult<List<QJTagData>>> GetTagGroup(string deviceName, string groupName)
+        public OperationResult<List<QJTagData>> GetTagGroup(string deviceName, string groupName)
         {
             if (groupName.Length == 0) return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，群組名稱為空!" };
             if (deviceName.Length == 0) return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，設備名稱為空!" };
@@ -1972,6 +1978,32 @@ namespace ICPFCore
             {
                 return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
             }            
+        }
+        public async Task<OperationResult<List<QJTagData>>> GetTagGroupAsync(string deviceName, string groupName)
+        {
+            if (groupName.Length == 0) return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，群組名稱為空!" };
+            if (deviceName.Length == 0) return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，設備名稱為空!" };
+            if (NetDeviceList.TryGetValue(deviceName, out DoubleNetworkBase deviceModel))
+            {
+                List<QJTagData> rData = new List<QJTagData>();
+                var result = deviceModel.Container.Where(x => x.Value.GroupName == groupName).ToList();
+                foreach (var item in result)
+                {
+                    rData.Add(item.Value);
+                }
+                if (rData.Count != 0)
+                {
+                    return new OperationResult<List<QJTagData>>() { IsOk = true, Data = rData, DeviceName = deviceName, Message = "獲取標籤成功!" };
+                }
+                else
+                {
+                    return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，找不到指定的標籤!" };
+                }
+            }
+            else
+            {
+                return new OperationResult<List<QJTagData>>() { IsOk = false, Message = "錯誤，找不到指定的設備容器!" };
+            }
         }
         public async Task<OperationResult<QJTagData>> GetTagAsync(string deviceName , string tagName)
         {
